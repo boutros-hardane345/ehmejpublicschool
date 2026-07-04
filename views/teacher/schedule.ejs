@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head><title>Class Schedule</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></head>
+<body>
+<%- include('../partials/header') %>
+<div class="container">
+  <div class="page-hero">
+    <p class="eyebrow">Timetable</p>
+    <h1><i class="fas fa-calendar-alt"></i> Weekly Schedule</h1>
+    <p>Add and filter classes by grade and day.</p>
+  </div>
+  <form method="POST" action="/teacher/schedule" class="filter-section">
+    <select name="className" required><option value="">Grade</option><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select>
+    <select name="day" required><option value="">Day</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option></select>
+    <input type="time" name="time" required>
+    <input type="text" name="subject" placeholder="Subject" required>
+    <button type="submit"><i class="fas fa-plus"></i> Add</button>
+  </form>
+  <form method="GET" action="/teacher/schedule" class="filter-section">
+    <label for="cf"><i class="fas fa-filter"></i> Class:</label>
+    <select id="cf" name="class">
+      <option value="all">All</option>
+      <% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %>
+    </select>
+    <label for="df"><i class="fas fa-calendar-day"></i> Day:</label>
+    <select id="df" name="day">
+      <option value="all">All</option>
+      <% ['Monday','Tuesday','Wednesday','Thursday','Friday'].forEach(d => { %><option value="<%= d %>" <%= selectedDay===d?'selected':'' %>><%= d %></option><% }) %>
+    </select>
+    <button type="submit"><i class="fas fa-search"></i> View</button>
+  </form>
+  <div class="table-responsive">
+    <table>
+      <thead><tr><th>Class</th><th>Day</th><th>Time</th><th>Subject</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% schedule.forEach(item => { %>
+          <tr>
+            <td><span class="class-badge"><%= item.className %></span></td>
+            <td><%= item.day %></td><td><%= item.time %></td><td><%= item.subject %></td>
+            <td><form method="POST" action="/teacher/schedule/delete/<%= item._id %>" style="display:inline"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i> Delete</button></form></td>
+          </tr>
+        <% }) %>
+        <% if (schedule.length===0) { %><tr><td colspan="5" class="text-center">No schedule items found.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

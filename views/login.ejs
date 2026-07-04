@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teacher Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <h1><i class="fas fa-chalkboard-teacher"></i> Teacher Login</h1>
+    <% if (error) { %>
+      <div class="alert error"><%= error %></div>
+    <% } %>
+    <form method="POST" action="/login">
+      <input type="email" name="email" placeholder="Teacher email" required>
+      <input type="password" name="password" placeholder="Teacher password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+</body>
+</html>

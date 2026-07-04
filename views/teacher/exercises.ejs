@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head><title>Exercises</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></head>
+<body>
+<%- include('../partials/header') %>
+<div class="container">
+  <h1><i class="fas fa-upload"></i> Upload Exercises</h1>
+  <form method="POST" action="/teacher/exercises" enctype="multipart/form-data">
+    <select name="className" required><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select>
+    <input type="text" name="title" placeholder="Title" required>
+    <input type="text" name="description" placeholder="Description">
+    <select name="semester"><option value="">Select Semester</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>">Semester <%=s%></option><%})%></select>
+    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required>
+    <button type="submit"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+  </form>
+  <table>
+    <thead><tr><th>Title</th><th>Class</th><th>Semester</th><th>File</th><th>Actions</th></tr></thead>
+    <tbody>
+      <% exercises.forEach(e=>{%>
+        <tr>
+          <td><%=e.title%></td><td><%=e.className%></td><td><%=e.semester||'N/A'%></td>
+          <td><% if(e.fileUrl){%><a href="<%=e.fileUrl%>" target="_blank"><i class="fas fa-file"></i> Download</a><%}%></td>
+          <td><form method="POST" action="/teacher/exercises/delete/<%=e._id%>" style="display:inline"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></button></form></td>
+        </tr>
+      <%})%>
+      <% if (exercises.length===0) {%><tr><td colspan="5" class="text-center">No exercises uploaded</td></tr><%}%>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

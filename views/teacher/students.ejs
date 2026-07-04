@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><title>Manage Students</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></head>
+<body>
+<%- include('../partials/header') %>
+<div class="container">
+  <h1><i class="fas fa-users"></i> Manage Students</h1>
+  <form method="POST" action="/teacher/students" class="add-form">
+    <input type="text" name="name" placeholder="Student Name" required>
+    <select name="className" required>
+      <option value="">Select Class</option>
+      <% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %>
+    </select>
+    <input type="text" name="academicYear" placeholder="Academic Year" pattern="\d{4}-\d{4}" value="<%= selectedYear %>" required>
+    <button type="submit"><i class="fas fa-plus"></i> Add Student</button>
+  </form>
+  <form method="GET" action="/teacher/students" class="filter-section">
+    <label for="cf"><i class="fas fa-filter"></i> Class:</label>
+    <select id="cf" name="class">
+      <option value="all">All</option>
+      <% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %>
+    </select>
+    <label for="yf"><i class="fas fa-calendar"></i> Year:</label>
+    <select id="yf" name="year">
+      <% academicYears.forEach(y => { %><option value="<%= y %>" <%= selectedYear===y?'selected':'' %>><%= y %></option><% }) %>
+    </select>
+    <button type="submit"><i class="fas fa-search"></i> View</button>
+  </form>
+  <div class="table-responsive">
+    <table id="studentsTable">
+      <thead><tr><th>Name</th><th>Class</th><th>Year</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% students.forEach(s => { %>
+          <tr><td><%= s.name %></td><td><span class="class-badge"><%= s.className %></span></td><td><%= s.academicYear||'Not set' %></td>
+            <td><form method="POST" action="/teacher/students/delete/<%= s._id %>" style="display:inline"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i> Delete</button></form></td>
+          </tr>
+        <% }) %>
+        <% if (students.length===0) { %><tr><td colspan="4" class="text-center">No students found.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

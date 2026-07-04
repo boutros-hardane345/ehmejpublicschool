@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head><title>Class Content</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></head>
+<body>
+<%- include('../partials/header') %>
+<div class="container">
+  <div class="page-hero">
+    <p class="eyebrow">Teaching Hub</p>
+    <h1><i class="fas fa-layer-group"></i> Announcements And Exercises</h1>
+    <p>Manage classroom updates and learning files from one page.</p>
+  </div>
+  <form method="GET" action="/teacher/content" class="filter-section">
+    <label for="ccf"><i class="fas fa-filter"></i> Class:</label>
+    <select id="ccf" name="class">
+      <option value="all">All Classes</option>
+      <% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %>
+    </select>
+    <label for="csf"><i class="fas fa-book"></i> Semester:</label>
+    <select id="csf" name="semester">
+      <option value="all">All</option>
+      <% [1,2,3,4].forEach(s => { %><option value="<%= s %>" <%= selectedSemester===String(s)?'selected':'' %>>Semester <%= s %></option><% }) %>
+    </select>
+    <button type="submit"><i class="fas fa-search"></i> Apply</button>
+  </form>
+  <div class="split-layout">
+    <section class="panel-card">
+      <div class="section-heading"><h2><i class="fas fa-bullhorn"></i> Post Announcement</h2><p>Share reminders, homework notes, and class updates.</p></div>
+      <form method="POST" action="/teacher/announcements" class="stack-form">
+        <select name="className" required><% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %></select>
+        <input type="text" name="title" placeholder="Announcement title" required>
+        <textarea name="content" placeholder="Write the message for students" rows="4" required></textarea>
+        <button type="submit"><i class="fas fa-paper-plane"></i> Publish</button>
+      </form>
+    </section>
+    <section class="panel-card">
+      <div class="section-heading"><h2><i class="fas fa-file-arrow-up"></i> Upload Exercise</h2><p>Add worksheets, review tasks, and semester practice files.</p></div>
+      <form method="POST" action="/teacher/exercises" enctype="multipart/form-data" class="stack-form">
+        <select name="className" required><% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %></select>
+        <input type="text" name="title" placeholder="Exercise title" required>
+        <input type="text" name="description" placeholder="Short description">
+        <select name="semester"><option value="">No semester</option><% [1,2,3,4].forEach(s => { %><option value="<%= s %>">Semester <%= s %></option><% }) %></select>
+        <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required>
+        <button type="submit"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+      </form>
+    </section>
+  </div>
+  <div class="split-layout">
+    <section class="panel-card">
+      <div class="section-heading"><h2><i class="fas fa-stream"></i> Announcements Feed</h2><p><%= announcements.length %> found.</p></div>
+      <div class="content-feed">
+        <% announcements.forEach(a => { %>
+          <article class="feed-item announcement-item">
+            <div class="feed-topline"><span class="class-badge"><%= a.className %></span><span class="muted-text"><%= a.createdAt.toLocaleDateString() %> <%= a.createdAt.toLocaleTimeString() %></span></div>
+            <h3><%= a.title %></h3><p><%= a.content %></p>
+            <form method="POST" action="/teacher/announcements/delete/<%= a._id %>" class="inline-action-form"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i> Delete</button></form>
+          </article>
+        <% }) %>
+        <% if (announcements.length===0) { %><p class="empty-state">No announcements match.</p><% } %>
+      </div>
+    </section>
+    <section class="panel-card">
+      <div class="section-heading"><h2><i class="fas fa-book-open"></i> Exercises Feed</h2><p><%= exercises.length %> found.</p></div>
+      <div class="content-feed">
+        <% exercises.forEach(e => { %>
+          <article class="feed-item exercise-item">
+            <div class="feed-topline"><span class="class-badge"><%= e.className %></span><span class="muted-text"><%= e.createdAt.toLocaleDateString() %></span></div>
+            <h3><%= e.title %></h3><p><%= e.description||'No description provided.' %></p>
+            <div class="feed-tags"><span><i class="fas fa-book"></i> <%= e.semester?`Semester ${e.semester}`:'No semester' %></span><% if (e.fileUrl) { %><a href="<%= e.fileUrl %>" target="_blank"><i class="fas fa-file"></i> Open</a><% } %></div>
+            <form method="POST" action="/teacher/exercises/delete/<%= e._id %>" class="inline-action-form"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i> Delete</button></form>
+          </article>
+        <% }) %>
+        <% if (exercises.length===0) { %><p class="empty-state">No exercises match.</p><% } %>
+      </div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="portal-container" style="max-width:1200px;margin:0 auto;padding:20px">
+    <div class="portal-header">
+      <h1><i class="fas fa-graduation-cap"></i> <%= selectedClass||'Student Portal' %></h1>
+      <% if (isGradeLanding) { %>
+        <p style="margin-bottom:0;opacity:.9">Open the page for your class to see announcements and exercises.</p>
+      <% } else { %>
+        <p style="margin-bottom:0;opacity:.9">Access announcements and exercises for <%= selectedClass %>.</p>
+        <a href="/portal" style="margin-top:1rem;display:inline-block"><i class="fas fa-arrow-left"></i> Back to class list</a>
+      <% } %>
+    </div>
+    <div class="portal-quote" style="background:#fcf9f5;border:1px solid #e8ddd0;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.5rem">
+      <p class="quote-banner-label">Daily Mathematical Thought</p>
+      <p class="quote-banner-text">"<%= dailyMathQuote.text %>"</p>
+      <p class="quote-banner-author"><%= dailyMathQuote.author %></p>
+    </div>
+    <% if (isGradeLanding) { %>
+      <div class="portal-directory" style="margin-top:2rem;background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 10px 24px rgba(11,42,74,.08)">
+        <h2>Select Your Class</h2>
+        <ul style="list-style:none;padding:0;margin:1rem 0 0">
+          <% classes.forEach(c => { %>
+            <li style="margin-top:.85rem"><a href="/portal/<%= c.toLowerCase().replace(' ','-') %>" style="color:#0b2a4a;text-decoration:none;font-weight:700"><%= c %></a></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } else { %>
+      <div class="portal-filters" style="background:#fff;border-radius:12px;padding:1rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+        <form method="GET" action="<%= portalPath %>" class="filter-form">
+          <label for="monthInput"><i class="fas fa-calendar"></i> Month:</label>
+          <input type="month" name="month" id="monthInput" value="<%= month||'' %>">
+          <label for="semesterInput"><i class="fas fa-book"></i> Semester:</label>
+          <input type="number" name="semester" id="semesterInput" placeholder="1-4" min="1" max="4" value="<%= semester||'' %>">
+          <button type="submit"><i class="fas fa-filter"></i> Filter</button>
+          <a href="<%= portalPath %>" class="clear-btn" style="padding:8px 20px;background:#e74c3c;color:#fff;text-decoration:none;border-radius:6px"><i class="fas fa-times"></i> Clear</a>
+        </form>
+      </div>
+      <div class="portal-content">
+        <div class="portal-section" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+          <h2 style="color:#0b2a4a;border-bottom:3px solid #0b2a4a;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-bullhorn"></i> Announcements</h2>
+          <% if (announcements&&announcements.length>0) { %>
+            <% announcements.forEach(a => { %>
+              <div class="portal-item">
+                <h3><%= a.title %></h3>
+                <p><%= a.content %></p>
+                <div class="meta" style="color:#777;font-size:.85rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem">
+                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-tag"></i> <%= a.className %></span>
+                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-clock"></i> <%= new Date(a.createdAt).toLocaleDateString() %></span>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="no-items" style="color:#999;text-align:center;padding:2rem;font-style:italic"><i class="fas fa-info-circle"></i><p>No announcements available.</p></div>
+          <% } %>
+        </div>
+        <div class="portal-section" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+          <h2 style="color:#0b2a4a;border-bottom:3px solid #0b2a4a;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-file-download"></i> Exercises</h2>
+          <% if (exercises&&exercises.length>0) { %>
+            <% exercises.forEach(e => { %>
+              <div class="portal-item">
+                <h3><%= e.title %></h3>
+                <p><%= e.description||'No description provided.' %></p>
+                <% if (e.fileUrl) { %>
+                  <a href="<%= e.fileUrl %>" class="download-btn" style="display:inline-block;margin-top:.5rem;padding:6px 16px;background:#0b2a4a;color:#fff;text-decoration:none;border-radius:6px;font-size:.9rem;transition:.2s" download><i class="fas fa-download"></i> Download Exercise</a>
+                <% } else { %>
+                  <span style="color:#999;font-size:.9rem"><i class="fas fa-file"></i> No file attached</span>
+                <% } %>
+                <div class="meta" style="color:#777;font-size:.85rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem">
+                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-tag"></i> <%= e.className %></span>
+                  <% if (e.semester) { %><span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-book"></i> Semester <%= e.semester %></span><% } %>
+                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-clock"></i> <%= new Date(e.createdAt).toLocaleDateString() %></span>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="no-items" style="color:#999;text-align:center;padding:2rem;font-style:italic"><i class="fas fa-info-circle"></i><p>No exercises available.</p></div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+    <div style="text-align:center;margin-top:3rem;padding:2rem 0;color:#999;border-top:1px solid #e9ecef"><p>&copy; 2026 Maths Teacher Platform · Student Portal</p></div>
+  </div>
+</body>
+</html>
