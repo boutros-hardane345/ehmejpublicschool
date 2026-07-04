@@ -198,16 +198,6 @@ app.post('/teacher/schedule/delete/:id', isAuth, h(async (req, res) => {
   res.redirect('/teacher/schedule');
 }));
 
-// Activity Log
-app.get('/teacher/activity-log', isAuth, h(async (req, res) => {
-  const {action,search} = req.query;
-  const filter = {};
-  if (action&&action!=='all') filter.action = action;
-  if (search&&search.trim()) filter.studentName = {$regex:search.trim(),$options:'i'};
-  const activities = await GradeActivity.find(filter).sort({createdAt:-1}).limit(100);
-  res.render('teacher/activity-log', {activities, selectedAction:action||'all', search:search||''});
-}));
-
 // Teacher Content
 app.get('/teacher/content', isAuth, h(async (req, res) => {
   const selectedClass = req.query.class||'all';
