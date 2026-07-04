@@ -9,7 +9,7 @@
 <body>
   <div class="portal-container" style="max-width:1200px;margin:0 auto;padding:20px">
     <div class="portal-header">
-      <h1><i class="fas fa-graduation-cap"></i> <%= selectedClass||'Student Portal' %></h1>
+      <h1><i class="fas fa-graduation-cap"></i> École Officielle Ehmej · <%= selectedClass||'Student Portal' %></h1>
       <% if (isGradeLanding) { %>
         <p style="margin-bottom:0;opacity:.9">Open the page for your class to see announcements and exercises.</p>
       <% } else { %>
@@ -84,7 +84,10 @@
         </div>
       </div>
     <% } %>
-    <div style="text-align:center;margin-top:3rem;padding:2rem 0;color:#999;border-top:1px solid #e9ecef"><p>&copy; 2026 Maths Teacher Platform · Student Portal</p></div>
+    <div style="text-align:center;margin-top:3rem;padding:2rem 0;color:#999;border-top:1px solid #e9ecef">
+      <a href="https://wa.me/96181239091" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.5rem;background:#25d366;color:#fff;padding:10px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:.95rem;margin-bottom:1rem;transition:.3s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"><i class="fab fa-whatsapp" style="font-size:1.3rem"></i> Chat WhatsApp</a>
+      <p>&copy; 2026 École Officielle Ehmej · Maths Platform</p>
+    </div>
   </div>
 </body>
 </html>
