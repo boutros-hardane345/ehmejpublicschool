@@ -238,8 +238,13 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .portal-filters .filter-form a{width:100%}
   .portal-directory{padding:1rem!important}
   .portal-directory li a{padding:.7rem .85rem;font-size:.95rem}
-  .portal-item{padding:1rem!important}
-  .portal-item h3{font-size:.95rem}
+  .portal-content{gap:0!important}
+  .portal-section{background:transparent!important;padding:0!important;box-shadow:none!important;border:none!important;margin-top:0!important}
+  .portal-section h2{margin-bottom:.75rem!important;font-size:1.05rem}
+  .portal-item{padding:.85rem 0!important;margin-bottom:0!important;border-radius:0!important;box-shadow:none!important;border:none!important;border-bottom:1px solid #ece4d9!important}
+  .portal-item:last-child{border-bottom:none!important}
+  .portal-item h3{font-size:.95rem;margin-bottom:.2rem!important}
+  .portal-item p{margin:.2rem 0!important;font-size:.88rem}
   .meta{font-size:.8rem!important;gap:.35rem!important}
   .meta span{padding:2px 8px!important;font-size:.78rem!important}
   .portal-quote{padding:.6rem .85rem!important}
@@ -284,9 +289,17 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   textarea{width:100%;min-height:96px}
   table{min-width:680px;font-size:.82rem}
   th,td{padding:8px}
-  .portal-container{padding:8px!important}
-  .portal-header{padding:.8rem 1rem!important}
+  .portal-container{padding:0!important}
+  .portal-section h2{font-size:.95rem;padding:.5rem 0!important;margin-bottom:.5rem!important}
+  .portal-item{padding:.7rem 0!important}
+  .portal-item h3{font-size:.9rem}
+  .portal-item p{font-size:.85rem}
+  .portal-header{padding:.8rem 1rem!important;border-radius:0!important}
   .portal-header h1{font-size:1rem}
+  .portal-filters{border-radius:0!important;margin-bottom:0!important}
+  .portal-quote{border-radius:0!important;margin-bottom:0!important;border-left:none!important;border-right:none!important}
+  .portal-section{padding:0 .8rem!important}
+  .portal-content{gap:0!important}
   .quiz-page{padding:8px!important}
   .quiz-form{padding:.8rem!important}
   .quiz-submit{padding:12px;font-size:.95rem}
@@ -301,11 +314,13 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
 .inline-action-form{background:transparent;border:none;padding:0;margin:0;box-shadow:none;display:inline}
 @media(max-width:420px){
   .login-container h1{font-size:1.45rem}
-  .portal-item{padding:.8rem!important}
-  .portal-item h3{font-size:.9rem}
-  .portal-section{padding:.8rem!important}
-  .portal-section h2{font-size:1rem}
+  .portal-item{padding:.6rem 0!important}
+  .portal-item h3{font-size:.85rem!important}
+  .portal-item p{font-size:.82rem!important}
+  .portal-section h2{font-size:.85rem!important}
   .portal-directory li a{font-size:.9rem;padding:.6rem .75rem}
+  .portal-directory{padding:.8rem!important}
+  .portal-directory ul{margin-top:.5rem!important}
   .quiz-card{padding:.6rem!important}
   .quiz-card .q-text{font-size:.85rem}
   .quiz-option label{padding:.4rem .6rem!important;font-size:.88rem}
