@@ -163,13 +163,6 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
 .bar-fill.bar-red{background:linear-gradient(90deg,#c0392b,#e74c3c)}
 .bar-value{color:#fff;font-size:.78rem;font-weight:700;white-space:nowrap}
 .bar-count{color:#667588;font-size:.82rem;min-width:60px;text-align:right}
-.schedule-mini{display:grid;gap:1rem}
-.schedule-day-block h4{color:#0b2a4a;margin-bottom:.5rem;font-size:.95rem}
-.schedule-chip{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,#f3f7fc,#fff);border:1px solid #e1e8f0;border-radius:999px;padding:.4rem .85rem;margin:0 .35rem .35rem 0;font-size:.85rem;transition:.3s}
-.schedule-chip:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.06)}
-.chip-class{font-weight:700;color:#0b2a4a}
-.chip-time{color:#1f5f93;font-weight:600}
-.chip-subject{color:#5b6775}
 .compact-table th,.compact-table td{padding:10px 12px;text-align:center}
 .compact-table th:first-child,.compact-table td:first-child{text-align:left}
 .compact-table td .class-badge{font-size:.85rem}
@@ -187,4 +180,11 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
 @media(max-width:1024px){.split-layout,.stats-grid{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}}
 @media(max-width:768px){.portal-content{grid-template-columns:1fr}.split-layout,.stats-grid{grid-template-columns:1fr}.hamburger{display:block}.main-header nav{display:flex;flex-direction:column;padding:0 1rem;gap:.35rem;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease}.main-header nav.open{max-height:400px;padding:0 1rem 1rem}.main-header nav a{width:100%;padding:.6rem .8rem;border-radius:10px;font-size:.95rem;text-align:center}.main-header nav a::after{display:none}form,.filter-form,.portal-class-tabs{flex-direction:column;align-items:stretch}form input,form select,form textarea{width:100%}table{font-size:.85rem;min-width:680px}th,td{padding:8px 10px}.grade-form{grid-template-columns:1fr}.filter-section{flex-direction:column;align-items:stretch}.filter-section select,.filter-form select,.filter-form input,.filter-form button,.filter-form a{width:100%}.quote-banner,.login-quote{width:calc(100% - 1.8rem)}.page-hero,.panel-card,.stat-card{padding:1.1rem}.header-row{padding:.75rem 1rem}}
 @media(max-width:640px){.container{margin:1rem auto;padding:0 .9rem}h1{font-size:1.55rem}.login-container{padding:1.5rem}.quick-links{display:grid;grid-template-columns:1fr}.quick-links a,.card{width:100%}form,.add-form,.filter-section{padding:1rem;gap:.75rem}form input,form select,form textarea,form button,.filter-section button,.add-form button{width:100%}textarea{width:100%;min-height:96px}table{min-width:680px;font-size:.82rem}th,td{padding:8px}}
+.question-form-row input,.question-form-row select{font-size:.85rem;padding:8px 12px;border:2px solid #e0e6ed;border-radius:8px;width:100%}
+.question-form-row input:focus,.question-form-row select:focus{outline:none;border-color:#b8944e}
+.quiz-option label:hover{border-color:#b8944e!important}
+.quiz-option input[type="radio"]:checked+span{font-weight:700;color:#0b2a4a}
+.question-block{border-left:4px solid #b8944e}
+.quiz-result h2{margin-top:0}
+.inline-action-form{background:transparent;border:none;padding:0;margin:0;box-shadow:none;display:inline}
 @media(max-width:420px){.login-container h1{font-size:1.45rem}.portal-item{padding:1rem}}

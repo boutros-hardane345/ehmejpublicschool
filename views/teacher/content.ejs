@@ -73,6 +73,104 @@
       </div>
     </section>
   </div>
+  <!-- Quizzes Section -->
+  <div style="margin-top:2rem">
+    <div class="page-hero" style="margin-bottom:1.5rem">
+      <p class="eyebrow">Evaluation</p>
+      <h1><i class="fas fa-question-circle"></i> Quizzes</h1>
+      <p>Create and manage online quizzes for your students.</p>
+    </div>
+    <div class="split-layout">
+      <section class="panel-card">
+        <div class="section-heading"><h2><i class="fas fa-plus-circle"></i> Create Quiz</h2><p>Add questions with automatic grading.</p></div>
+        <form method="POST" action="/teacher/quizzes" onsubmit="document.getElementById('questionsJson').value=JSON.stringify(questions)" class="stack-form">
+          <input type="text" name="title" placeholder="Quiz title" required>
+          <select name="className" required>
+            <% classes.forEach(c => { %><option value="<%= c %>" <%= selectedClass===c?'selected':'' %>><%= c %></option><% }) %>
+          </select>
+          <select name="semester"><option value="">No semester</option><% [1,2,3,4].forEach(s => { %><option value="<%= s %>">Semester <%= s %></option><% }) %></select>
+          <input type="hidden" name="questions" id="questionsJson">
+          <div id="questionsContainer" style="margin:.5rem 0"></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button type="button" onclick="addQuestion()" style="background:#b8944e;color:#fff"><i class="fas fa-plus"></i> Add Question</button>
+            <button type="submit"><i class="fas fa-save"></i> Save Quiz</button>
+          </div>
+        </form>
+      </section>
+      <section class="panel-card">
+        <div class="section-heading"><h2><i class="fas fa-list"></i> Quiz List</h2><p><%= quizzes.length %> quiz<%= quizzes.length!==1?'zes':'' %> created.</p></div>
+        <div class="content-feed">
+          <% quizzes.forEach(q => { %>
+            <article class="feed-item" style="border-left:3px solid #b8944e">
+              <div class="feed-topline"><span class="class-badge"><%= q.className %></span><% if (q.semester) { %><span class="muted-text">Semester <%= q.semester %></span><% } %></div>
+              <h3><%= q.title %></h3>
+              <p style="color:#667588;font-size:.85rem"><%= q.questions.length %> question<%= q.questions.length!==1?'s':'' %> · <%= q.createdAt.toLocaleDateString() %></p>
+              <div class="feed-tags">
+                <a href="/teacher/quizzes/<%= q._id %>" style="background:#0b2a4a;color:#fff;padding:.35rem .75rem;border-radius:20px;text-decoration:none;font-size:.8rem;font-weight:600"><i class="fas fa-chart-bar"></i> Results</a>
+                <form method="POST" action="/teacher/quizzes/delete/<%= q._id %>" class="inline-action-form" style="display:inline"><button type="submit" class="btn-delete" onclick="return confirm('Delete this quiz and all its attempts?')"><i class="fas fa-trash"></i> Delete</button></form>
+              </div>
+            </article>
+          <% }) %>
+          <% if (quizzes.length===0) { %><p class="empty-state">No quizzes created yet.</p><% } %>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>
+<script>
+let questions = [];
+const types = ['mcq','truefalse','shortanswer'];
+const typeLabels = {mcq:'Multiple Choice',truefalse:'True / False',shortanswer:'Short Answer'};
+function addQuestion() {
+  questions.push({questionText:'',type:'mcq',options:['','','',''],correctIndex:-1,correctAnswer:''});
+  renderQuestions();
+}
+function removeQuestion(i) {
+  questions.splice(i,1);
+  renderQuestions();
+}
+function updateQuestion(i,field,value) {
+  if (field==='options0'||field==='options1'||field==='options2'||field==='options3') {
+    const idx = parseInt(field.replace('options',''));
+    questions[i].options[idx] = value;
+  } else if (field==='correctIndex') {
+    questions[i].correctIndex = value;
+  } else {
+    questions[i][field] = value;
+  }
+}
+function renderQuestions() {
+  const c = document.getElementById('questionsContainer');
+  c.innerHTML = questions.map((q,i)=>`
+    <div class="question-form-row" style="background:#faf8f5;border:1px solid #ece4d9;border-radius:12px;padding:.8rem;margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <strong style="color:#0b2a4a">Question ${i+1}</strong>
+        <button type="button" onclick="removeQuestion(${i})" class="btn-delete" style="padding:4px 10px;font-size:.75rem"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="text" placeholder="Question text" value="${q.questionText.replace(/"/g,'&quot;')}" onchange="updateQuestion(${i},'questionText',this.value)" style="width:100%;margin-bottom:.5rem">
+      <select onchange="updateQuestion(${i},'type',this.value);renderQuestions()" style="margin-bottom:.5rem">
+        ${types.map(t => `<option value="${t}" ${q.type===t?'selected':''}>${typeLabels[t]}</option>`).join('')}
+      </select>
+      ${q.type==='mcq' ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
+          ${[0,1,2,3].map(j => `<input type="text" placeholder="Option ${j+1}" value="${(q.options[j]||'').replace(/"/g,'&quot;')}" onchange="updateQuestion(${i},'options${j}',this.value)">`).join('')}
+        </div>
+        <select onchange="updateQuestion(${i},'correctIndex',parseInt(this.value))" style="width:100%">
+          <option value="-1">Correct answer</option>
+          ${q.options.map((o,j) => `<option value="${j}" ${q.correctIndex===j?'selected':''}>${o||'Option '+(j+1)}</option>`).join('')}
+        </select>
+      ` : q.type==='truefalse' ? `
+        <div style="display:flex;gap:1rem;padding:.3rem 0">
+          <label><input type="radio" name="tf${i}" value="true" ${q.correctAnswer==='true'?'checked':''} onchange="updateQuestion(${i},'correctAnswer','true')"> True</label>
+          <label><input type="radio" name="tf${i}" value="false" ${q.correctAnswer==='false'?'checked':''} onchange="updateQuestion(${i},'correctAnswer','false')"> False</label>
+        </div>
+      ` : `
+        <input type="text" placeholder="Expected answer" value="${(q.correctAnswer||'').replace(/"/g,'&quot;')}" onchange="updateQuestion(${i},'correctAnswer',this.value)" style="width:100%">
+      `}
+    </div>
+  `).join('');
+  if (questions.length===0) c.innerHTML = '<p class="empty-state" style="padding:1rem;text-align:center;color:#999;font-style:italic">No questions yet. Click "Add Question" to start.</p>';
+}
+</script>
 </body>
 </html>
