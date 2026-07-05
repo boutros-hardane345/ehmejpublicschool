@@ -144,15 +144,8 @@ app.get('/teacher/dashboard', isAuth, h(async (req, res) => {
       return sg.length ? Math.round(sg.reduce((a,g)=>a+g.final60,0)/sg.length*10)/10 : 0;
     })};
   });
-  const totalGradedStudents = [...new Set(allGrades.map(g=>g.studentId.toString()))].length;
-  const gradedWithAllSemesters = students.filter(s => allGrades.filter(g=>g.studentId.equals(s._id)).length>=4).length;
-  const gradedWithWinter = students.filter(s => allGrades.find(g=>g.studentId.equals(s._id)&&g.semester===1) && allGrades.find(g=>g.studentId.equals(s._id)&&g.semester===2)).length;
-  const gradedWithSpring = students.filter(s => allGrades.find(g=>g.studentId.equals(s._id)&&g.semester===3) && allGrades.find(g=>g.studentId.equals(s._id)&&g.semester===4)).length;
   const overallAverage = semesterAverages.reduce((s,x)=>s+x.average,0)/4;
-  const examsWithMid = allExamResults.filter(e=>e.midYearExam>0).length;
-  const examsWithFinal = allExamResults.filter(e=>e.finalYearExam>0).length;
-  const examsWithBoth = allExamResults.filter(e=>e.midYearExam>0&&e.finalYearExam>0).length;
-  res.render('teacher/dashboard', {students,announcements,exercises,currentYear,classBreakdown,classAverages,semesterAverages,totalGradedStudents,gradedWithAllSemesters,gradedWithWinter,gradedWithSpring,examsWithMid,examsWithFinal,examsWithBoth,overallAverage});
+  res.render('teacher/dashboard', {students,announcements,exercises,currentYear,classBreakdown,classAverages,semesterAverages,overallAverage});
 }));
 
 // Students
