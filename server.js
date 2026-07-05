@@ -14,8 +14,6 @@ const Student = require('./models/Student');
 const Announcement = require('./models/Announcement');
 const Exercise = require('./models/Exercise');
 const Grade = require('./models/Grade');
-const Quiz = require('./models/Quiz');
-const QuizAttempt = require('./models/QuizAttempt');
 const ExamResult = require('./models/ExamResult');
 const GradeActivity = require('./models/GradeActivity');
 const SemesterConfig = require('./models/SemesterConfig');
@@ -177,6 +175,13 @@ app.post('/teacher/students/delete/:id', isAuth, h(async (req, res) => {
   res.redirect(req.headers.referer||'/teacher/students');
 }));
 
+app.post('/teacher/students/delete-all', isAuth, h(async (req, res) => {
+  await Student.deleteMany({});
+  await Grade.updateMany({},{$set:{attendance:0,ds:[0,0,0,0],bigExam:0,rawTotal:0,final60:0}});
+  await ExamResult.updateMany({},{$set:{midYearExam:0,finalYearExam:0}});
+  res.redirect('/teacher/students');
+}));
+
 // Teacher Content
 app.get('/teacher/content', isAuth, h(async (req, res) => {
   const selectedClass = req.query.class||'all';
@@ -185,12 +190,11 @@ app.get('/teacher/content', isAuth, h(async (req, res) => {
   if (selectedClass!=='all') { af.className=selectedClass; ef.className=selectedClass; }
   const sn = parseInt(selectedSemester,10);
   if (!isNaN(sn)&&sn>=1&&sn<=4) ef.semester = sn;
-  const [announcements, exercises, quizzes] = await Promise.all([
+  const [announcements, exercises] = await Promise.all([
     Announcement.find(af).sort({createdAt:-1}),
-    Exercise.find(ef).sort({createdAt:-1}),
-    Quiz.find(af).sort({createdAt:-1})
+    Exercise.find(ef).sort({createdAt:-1})
   ]);
-  res.render('teacher/content', {announcements,exercises,quizzes,classes:CLASSES,selectedClass,selectedSemester});
+  res.render('teacher/content', {announcements,exercises,classes:CLASSES,selectedClass,selectedSemester});
 }));
 
 app.get('/teacher/announcements', isAuth, (req, res) => {
@@ -222,84 +226,6 @@ app.post('/teacher/exercises', isAuth, upload.single('file'), h(async (req, res)
 app.post('/teacher/exercises/delete/:id', isAuth, h(async (req, res) => {
   await Exercise.findByIdAndDelete(req.params.id);
   res.redirect(req.headers.referer||'/teacher/content');
-}));
-
-// Quizzes
-app.get('/teacher/quizzes/:id', isAuth, h(async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id);
-  if (!quiz) return res.status(404).send('Quiz not found');
-  const attempts = await QuizAttempt.find({quizId:quiz._id}).sort({submittedAt:-1});
-  res.render('teacher/quiz-results', {quiz, attempts});
-}));
-
-app.post('/teacher/quizzes', isAuth, h(async (req, res) => {
-  const {title,className,semester,questions} = req.body;
-  const parsed = typeof questions === 'string' ? JSON.parse(questions) : questions;
-  await Quiz.create({title,className,semester:semester||undefined,questions:parsed});
-  res.redirect('/teacher/content');
-}));
-
-app.post('/teacher/quizzes/delete/:id', isAuth, h(async (req, res) => {
-  await Quiz.findByIdAndDelete(req.params.id);
-  await QuizAttempt.deleteMany({quizId:req.params.id});
-  res.redirect('/teacher/content');
-}));
-
-app.post('/teacher/quizzes/override/:attemptId', isAuth, h(async (req, res) => {
-  const {questionIndex,value} = req.body;
-  const attempt = await QuizAttempt.findById(req.params.attemptId);
-  if (!attempt) return res.status(404).json({success:false});
-  const qi = parseInt(questionIndex);
-  if (attempt.answers[qi]) {
-    attempt.answers[qi].teacherOverride = value === 'true' || value === true;
-  }
-  const finalCorrect = attempt.answers.filter(a => {
-    if (a.teacherOverride !== null) return a.teacherOverride;
-    return a.autoCorrect;
-  }).length;
-  attempt.score = finalCorrect;
-  attempt.total = attempt.answers.length;
-  await attempt.save();
-  res.json({success:true, score: attempt.score, total: attempt.total});
-}));
-
-// Student Quiz
-app.get('/portal/quiz/:id', h(async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id);
-  if (!quiz) return res.status(404).send('Quiz not found');
-  res.render('student/quiz', {quiz, result:null, error:null, studentName:''});
-}));
-
-app.post('/portal/quiz/:id', h(async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id);
-  if (!quiz) return res.status(404).send('Quiz not found');
-  const {studentName, answers} = req.body;
-  if (!studentName || !studentName.trim()) return res.render('student/quiz', {quiz, result:null, error:'Please enter your name.', studentName:''});
-  const parsedAnswers = typeof answers === 'string' ? JSON.parse(answers) : answers;
-  const existing = await QuizAttempt.findOne({quizId:quiz._id, studentName:studentName.trim()});
-  if (existing) return res.render('student/quiz', {quiz, result:null, error:`You already took this quiz on ${existing.submittedAt.toLocaleDateString()}.`, studentName:studentName.trim()});
-  const graded = quiz.questions.map((q, i) => {
-    const userAnswer = parsedAnswers ? parsedAnswers.find(a => a.questionIndex === i) : null;
-    const answer = userAnswer ? userAnswer.answer : '';
-    let autoCorrect = false;
-    if (q.type === 'mcq') {
-      autoCorrect = parseInt(answer) === q.correctIndex;
-    } else if (q.type === 'truefalse') {
-      autoCorrect = answer.trim().toLowerCase() === (q.correctAnswer || '').trim().toLowerCase();
-    } else if (q.type === 'shortanswer') {
-      autoCorrect = answer.trim().toLowerCase() === (q.correctAnswer || '').trim().toLowerCase();
-    }
-    return {questionIndex: i, answer, autoCorrect};
-  });
-  const score = graded.filter(g => g.autoCorrect).length;
-  const attempt = await QuizAttempt.create({
-    quizId: quiz._id,
-    studentName: studentName.trim(),
-    answers: graded,
-    score,
-    total: quiz.questions.length
-  });
-  res.render('student/quiz', {quiz, result: attempt, error:null, studentName: studentName.trim()});
 }));
 
 // DS Count
@@ -455,11 +381,10 @@ app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
   const className = gradeSlugToClass(req.params.gradeSlug);
   const isGradeLanding = !req.params.gradeSlug;
   if (req.params.gradeSlug&&!className) return res.status(404).send('Class portal not found');
-  if (isGradeLanding) return res.render('student/portal',{announcements:[],exercises:[],quizzes:[],classes:CLASSES,isGradeLanding,selectedClass:null,portalPath:'/portal',month:month||'',semester:semester||''});
-  let [announcements, exercises, quizzes] = await Promise.all([
+  if (isGradeLanding) return res.render('student/portal',{announcements:[],exercises:[],classes:CLASSES,isGradeLanding,selectedClass:null,portalPath:'/portal',month:month||'',semester:semester||''});
+  let [announcements, exercises] = await Promise.all([
     Announcement.find({className}).sort({createdAt:-1}),
-    Exercise.find({className}).sort({createdAt:-1}),
-    Quiz.find({className}).sort({createdAt:-1})
+    Exercise.find({className}).sort({createdAt:-1})
   ]);
   if (month) {
     const start = new Date(new Date(month).getFullYear(),new Date(month).getMonth(),1);
@@ -468,7 +393,7 @@ app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
     exercises = exercises.filter(e => {const d=new Date(e.createdAt); return d>=start&&d<end;});
   }
   if (semester&&!isNaN(semester)) { const sn=parseInt(semester); if(sn>=1&&sn<=4) exercises=exercises.filter(e=>e.semester===sn); }
-  res.render('student/portal',{announcements,exercises,quizzes,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className),month:month||'',semester:semester||''});
+  res.render('student/portal',{announcements,exercises,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className),month:month||'',semester:semester||''});
 }));
 
 // ============ START SERVER ============

@@ -81,39 +81,6 @@
           <% } else { %>
             <div class="no-items" style="color:#999;text-align:center;padding:2rem;font-style:italic"><i class="fas fa-info-circle"></i><p>No exercises available.</p></div>
           <% } %>
-        </div>
-        <!-- Quizzes Section -->
-        <div class="portal-section" style="margin-top:1.5rem;grid-column:span 2">
-          <h2 style="color:#0b2a4a;border-bottom:3px solid #b8944e;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-question-circle"></i> Quizzes</h2>
-          <% if (quizzes&&quizzes.length>0) { %>
-            <% quizzes.forEach(q => { %>
-              <div class="portal-item" data-quiz-id="<%= q._id %>">
-                <h3><%= q.title %></h3>
-                <p style="color:#667588;font-size:.85rem"><%= q.questions.length %> question<%= q.questions.length!==1?'s':'' %><% if (q.semester) { %> · Semester <%= q.semester %><% } %></p>
-                <div class="quiz-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.5rem">
-                  <a href="/portal/quiz/<%= q._id %>" class="download-btn" style="display:inline-block;padding:6px 16px;background:#0b2a4a;color:#fff;text-decoration:none;border-radius:6px;font-size:.9rem;transition:.2s"><i class="fas fa-pencil-alt"></i> Take Quiz</a>
-                </div>
-                <div class="meta">
-                  <span><i class="fas fa-tag"></i> <%= q.className %></span>
-                  <span><i class="fas fa-clock"></i> <%= new Date(q.createdAt).toLocaleDateString() %></span>
-                </div>
-              </div>
-            <% }) %>
-          <% } else { %>
-            <div class="no-items" style="color:#999;text-align:center;padding:2rem;font-style:italic"><i class="fas fa-info-circle"></i><p>No quizzes available.</p></div>
-          <% } %>
-        </div>
-        <script>
-        (function() {
-          const done = JSON.parse(localStorage.getItem('ehmej_quizzes') || '[]');
-          document.querySelectorAll('[data-quiz-id]').forEach(el => {
-            if (done.includes(el.dataset.quizId)) {
-              const btn = el.querySelector('.quiz-actions');
-              if (btn) btn.innerHTML += '<span style="background:#27ae60;color:#fff;padding:6px 12px;border-radius:6px;font-size:.8rem;font-weight:600">✅ Completed</span>';
-            }
-          });
-        })();
-        </script>
       </div>
     <% } %>
     <div style="text-align:center;margin-top:3rem;padding:2rem 0;color:#999;border-top:1px solid #e9ecef">

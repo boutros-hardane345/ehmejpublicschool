@@ -198,31 +198,10 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
 .portal-directory ul li a:hover{color:#b8944e!important;transform:translateX(4px);display:inline-block}
 .clear-btn{display:inline-flex;align-items:center;gap:.35rem;padding:8px 20px;background:#e74c3c;color:#fff;text-decoration:none;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-size:.88rem;transition:.3s}
 .clear-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(231,76,60,.25)}
-.quiz-page{max-width:800px;margin:0 auto;padding:20px}
-.quiz-form{background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 10px 24px rgba(11,42,74,.08);border:1px solid #e8ddd0}
-.quiz-form input[type="text"]{width:100%;padding:12px 14px;border:2px solid #e8ddd0;border-radius:10px;font-size:.95rem}
-.quiz-form input[type="text"]:focus{outline:none;border-color:#b8944e}
-.quiz-card{background:#faf8f5;border:1px solid #ece4d9;border-radius:12px;padding:1rem;margin-bottom:1rem;border-left:4px solid #b8944e}
-.quiz-card .q-text{font-weight:600;color:#0b2a4a;margin-bottom:.6rem;font-size:1rem}
-.quiz-option label{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border:2px solid #e8ddd0;border-radius:8px;cursor:pointer;transition:.2s;background:#fff}
-.quiz-option label:hover{border-color:#b8944e!important}
-.quiz-option input[type="radio"]{width:auto;margin:0;accent-color:#0b2a4a}
-.quiz-tf-options{display:flex;gap:1rem}
-.quiz-tf-options label{flex:1;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.7rem;border:2px solid #e8ddd0;border-radius:8px;cursor:pointer;transition:.2s;background:#fff}
-.quiz-tf-options label:hover{border-color:#b8944e}
-.quiz-tf-options input[type="radio"]{width:auto;margin:0;accent-color:#0b2a4a}
-.quiz-submit{width:100%;padding:14px;font-size:1rem;font-weight:700;border:none;border-radius:10px;background:linear-gradient(135deg,#0b2a4a,#1a4a6e);color:#fff;cursor:pointer;transition:.3s}
-.quiz-submit:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(11,42,74,.25)}
-.quiz-result-card{background:#fff;border-radius:16px;padding:2rem;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;margin-bottom:1.5rem}
-.quiz-review{background:#faf8f5;border:1px solid #ece4d9;border-radius:10px;padding:.75rem 1rem;margin-bottom:.6rem;border-left:4px solid}
-.quiz-review-correct{border-left-color:#27ae60}
-.quiz-review-wrong{border-left-color:#e74c3c}
 .download-btn{display:inline-block;padding:6px 16px;background:#0b2a4a;color:#fff;text-decoration:none;border-radius:6px;font-size:.9rem;transition:.2s;border:none;cursor:pointer;font-weight:600}
 .download-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(11,42,74,.2);color:#fff}
 .whatsapp-btn{display:inline-flex;align-items:center;gap:.5rem;background:#25d366;color:#fff;padding:10px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:.95rem;margin-bottom:1rem;transition:.3s;border:none;cursor:pointer}
 .whatsapp-btn:hover{transform:scale(1.05);color:#fff}
-.name-input-group{margin-bottom:1rem}
-.name-input-group label{font-weight:700;color:#0b2a4a;display:block;margin-bottom:.3rem}
 @media(max-width:1024px){.split-layout,.stats-grid{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}}
 @media(max-width:768px){
   .portal-content{grid-template-columns:1fr}
@@ -265,16 +244,6 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .quote-banner,.login-quote{width:calc(100% - 1.8rem)}
   .page-hero,.panel-card,.stat-card{padding:1.1rem}
   .header-row{padding:.75rem 1rem}
-  .quiz-page{padding:12px!important}
-  .quiz-form{padding:1rem!important}
-  .quiz-card{padding:.8rem!important}
-  .quiz-card .q-text{font-size:.92rem}
-  .quiz-tf-options{flex-direction:column;gap:.5rem}
-  .quiz-tf-options label{padding:.6rem}
-  .quiz-result-card{padding:1.2rem!important}
-  .quiz-result-card .score-display{font-size:2rem!important}
-  .quiz-review{padding:.6rem .8rem!important;font-size:.85rem!important}
-  .name-input-group input{font-size:.9rem!important}
   download-btn{width:100%;text-align:center}
   .question-form-row input,.question-form-row select{font-size:.82rem}
 }
@@ -300,17 +269,10 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .portal-quote{border-radius:0!important;margin-bottom:0!important;border-left:none!important;border-right:none!important}
   .portal-section{padding:0 .8rem!important}
   .portal-content{gap:0!important}
-  .quiz-page{padding:8px!important}
-  .quiz-form{padding:.8rem!important}
-  .quiz-submit{padding:12px;font-size:.95rem}
   .download-btn{width:100%;text-align:center;box-sizing:border-box}
 }
 .question-form-row input,.question-form-row select{font-size:.85rem;padding:8px 12px;border:2px solid #e0e6ed;border-radius:8px;width:100%}
 .question-form-row input:focus,.question-form-row select:focus{outline:none;border-color:#b8944e}
-.quiz-option label:hover{border-color:#b8944e!important}
-.quiz-option input[type="radio"]:checked+span{font-weight:700;color:#0b2a4a}
-.question-block{border-left:4px solid #b8944e}
-.quiz-result h2{margin-top:0}
 .inline-action-form{background:transparent;border:none;padding:0;margin:0;box-shadow:none;display:inline}
 @media(max-width:420px){
   .login-container h1{font-size:1.45rem}
@@ -321,10 +283,5 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .portal-directory li a{font-size:.9rem;padding:.6rem .75rem}
   .portal-directory{padding:.8rem!important}
   .portal-directory ul{margin-top:.5rem!important}
-  .quiz-card{padding:.6rem!important}
-  .quiz-card .q-text{font-size:.85rem}
-  .quiz-option label{padding:.4rem .6rem!important;font-size:.88rem}
-  .quiz-result-card{padding:1rem!important}
-  .quiz-result-card .score-display{font-size:1.6rem!important}
-  .quiz-form{padding:.6rem!important}
+
 }

@@ -39,6 +39,11 @@
       </tbody>
     </table>
   </div>
+  <% if (students.length>0) { %>
+    <form method="POST" action="/teacher/students/delete-all" style="margin-top:1rem;justify-content:flex-end" onsubmit="return confirm('Remove ALL students and reset all grades/exams to zero? This cannot be undone.')">
+      <button type="submit" class="btn-delete" style="padding:10px 22px;font-size:.9rem"><i class="fas fa-exclamation-triangle"></i> Remove All Students & Reset Grades</button>
+    </form>
+  <% } %>
 </div>
 </body>
 </html>
