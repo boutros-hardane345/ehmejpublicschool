@@ -18,16 +18,30 @@
     <select id="sf" name="semester"><option value="all">All</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>" <%=selectedSemester===String(s)?'selected':''%>>Semester <%=s%></option><%})%></select>
     <button type="submit"><i class="fas fa-search"></i> View</button>
   </form>
+  <% if (selectedClass!=='all') { %>
+    <div class="filter-section" style="background:linear-gradient(135deg,#fcf7ef,#fff);border-color:#e0d3c0">
+      <label><i class="fas fa-sliders-h"></i> Devoirs Surveillés count per semester:</label>
+      <% [1,2,3,4].forEach(s => { %>
+        <form method="POST" action="/teacher/grades/ds-count" style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .5rem;margin:0;background:transparent;box-shadow:none;border:none">
+          <input type="hidden" name="className" value="<%= selectedClass %>">
+          <input type="hidden" name="semester" value="<%= s %>">
+          <span style="font-size:.82rem;color:#4a3f33;font-weight:600">S<%= s %>:</span>
+          <select name="dsCount" onchange="this.form.submit()" style="padding:4px 8px;border:2px solid #e0d3c0;border-radius:6px;font-size:.82rem;min-width:auto;width:auto">
+            <% [2,3,4].forEach(n => { %>
+              <option value="<%= n %>" <%= getDsCount(selectedClass,s)===n?'selected':'' %>><%= n %></option>
+            <% }) %>
+          </select>
+        </form>
+      <% }) %>
+    </div>
+  <% } %>
   <section class="panel-card">
     <div class="section-heading"><h2><i class="fas fa-edit"></i> Grade Entry</h2><p>Select student and semester, then enter scores.</p></div>
-    <form method="POST" action="/teacher/grades" class="grade-form">
-      <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
-      <select name="semester" required><option value="">Semester</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>">Semester <%=s%></option><%})%></select>
+    <form method="POST" action="/teacher/grades" class="grade-form" id="gradeForm">
+      <select name="studentId" id="studentSelect" required onchange="updateDsFields()"><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>" data-class="<%=s.className%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
+      <select name="semester" id="semesterSelect" required onchange="updateDsFields()"><option value="">Semester</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>">Semester <%=s%></option><%})%></select>
       <input type="number" name="attendance" placeholder="Attendance /10" min="0" max="10" step="0.5" required>
-      <input type="number" name="ds1" placeholder="DS 1 /10" min="0" max="10" step="0.5">
-      <input type="number" name="ds2" placeholder="DS 2 /10" min="0" max="10" step="0.5">
-      <input type="number" name="ds3" placeholder="DS 3 /10" min="0" max="10" step="0.5">
-      <input type="number" name="ds4" placeholder="DS 4 /10" min="0" max="10" step="0.5">
+      <div id="dsFields"></div>
       <input type="number" name="bigExam" placeholder="Big Exam /50" min="0" max="50" step="0.5" required>
       <button type="submit"><i class="fas fa-save"></i> Save Grade</button>
     </form>
@@ -54,7 +68,13 @@
     <div class="section-heading"><h2><i class="fas fa-table"></i> Semester Grades</h2><p><%= grades.length %> grade<%= grades.length===1?'':'s' %> recorded.</p></div>
     <div class="table-responsive">
       <table id="gradesTable">
-        <thead><tr><th>Student</th><th>Class</th><th>Year</th><th>Sem</th><th>Att</th><th>DS1</th><th>DS2</th><th>DS3</th><th>DS4</th><th>Exam</th><th>Raw</th><th>Final</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Student</th><th>Class</th><th>Year</th><th>Sem</th><th>Att</th>
+            <th id="dsHeader1">DS1</th><th id="dsHeader2">DS2</th><th id="dsHeader3">DS3</th><th id="dsHeader4">DS4</th>
+            <th>Exam</th><th>Raw</th><th>Final</th>
+          </tr>
+        </thead>
         <tbody>
           <% grades.forEach(g=>{const s=students.find(s=>s._id.toString()===g.studentId.toString());if(!s)return;%>
             <tr>
@@ -89,5 +109,36 @@
     </div>
   </section>
 </div>
+<script>
+var dsCountMap = {};
+<% classes.forEach(function(c) { [1,2,3,4].forEach(function(s) { %>
+  dsCountMap['<%= c %>-<%= s %>'] = <%= getDsCount(c, s) %>;
+<% }) }) %>
+
+function getDsCountForClassSem(className, semester) {
+  return dsCountMap[className + '-' + semester] || 4;
+}
+
+function updateDsFields() {
+  var semSelect = document.getElementById('semesterSelect');
+  var studentSelect = document.getElementById('studentSelect');
+  var container = document.getElementById('dsFields');
+  var sem = parseInt(semSelect.value);
+  if (!sem) { container.innerHTML = ''; return; }
+  var opt = studentSelect.options[studentSelect.selectedIndex];
+  var className = opt && opt.value ? opt.getAttribute('data-class') : '';
+  var dsCount = className ? getDsCountForClassSem(className, sem) : 4;
+  container.innerHTML = '';
+  for (var i = 1; i <= dsCount; i++) {
+    var inp = document.createElement('input');
+    inp.type = 'number';
+    inp.name = 'ds' + i;
+    inp.placeholder = 'DS ' + i + ' /10';
+    inp.min = 0; inp.max = 10; inp.step = 0.5;
+    container.appendChild(inp);
+  }
+}
+updateDsFields();
+</script>
 </body>
 </html>

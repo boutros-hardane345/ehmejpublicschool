@@ -18,6 +18,7 @@ const Quiz = require('./models/Quiz');
 const QuizAttempt = require('./models/QuizAttempt');
 const ExamResult = require('./models/ExamResult');
 const GradeActivity = require('./models/GradeActivity');
+const SemesterConfig = require('./models/SemesterConfig');
 
 const CLASSES = ['Grade 7', 'Grade 8', 'Grade 9'];
 const MATH_QUOTES = [
@@ -301,6 +302,17 @@ app.post('/portal/quiz/:id', h(async (req, res) => {
   res.render('student/quiz', {quiz, result: attempt, error:null, studentName: studentName.trim()});
 }));
 
+// DS Count
+app.post('/teacher/grades/ds-count', isAuth, h(async (req, res) => {
+  const {className,semester,dsCount} = req.body;
+  await SemesterConfig.findOneAndUpdate(
+    {className,semester:parseInt(semester)},
+    {className,semester:parseInt(semester),dsCount:parseInt(dsCount)},
+    {upsert:true,new:true}
+  );
+  res.redirect(req.headers.referer||'/teacher/grades');
+}));
+
 // Grades
 app.get('/teacher/grades', isAuth, h(async (req, res) => {
   const selectedClass = req.query.class||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedSemester = req.query.semester||'all';
@@ -311,14 +323,33 @@ app.get('/teacher/grades', isAuth, h(async (req, res) => {
   const sn = parseInt(selectedSemester,10);
   if (!isNaN(sn)&&sn>=1&&sn<=4) grades = grades.filter(g=>g.semester===sn);
   const academicYears = await getAcademicYears(selectedYear);
-  res.render('teacher/grades', {students,grades,examResults,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedSemester});
+  let dsCounts = {};
+  if (selectedClass!=='all' && !isNaN(sn) && sn>=1 && sn<=4) {
+    const cfg = await SemesterConfig.findOne({className:selectedClass,semester:sn});
+    if (cfg) dsCounts[`${selectedClass}-${sn}`] = cfg.dsCount;
+  } else if (selectedClass!=='all') {
+    const cfgs = await SemesterConfig.find({className:selectedClass});
+    cfgs.forEach(c => { dsCounts[`${selectedClass}-${c.semester}`] = c.dsCount; });
+  }
+  const getDsCount = (className, semester) => dsCounts[`${className}-${semester}`] || 4;
+  res.render('teacher/grades', {students,grades,examResults,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedSemester,getDsCount});
 }));
 
 app.post('/teacher/grades', isAuth, h(async (req, res) => {
-  const {studentId,semester,attendance,ds1,ds2,ds3,ds4,bigExam} = req.body;
-  const ds = [parseFloat(ds1)||0, parseFloat(ds2)||0, parseFloat(ds3)||0, parseFloat(ds4)||0];
+  const {studentId,semester,attendance,bigExam} = req.body;
+  const sn = parseInt(semester);
+  const student = await Student.findById(studentId);
+  const className = student ? student.className : '';
+  const cfg = await SemesterConfig.findOne({className,semester:sn});
+  const dsCount = cfg ? cfg.dsCount : 4;
+  const ds = [];
+  for (let i = 1; i <= dsCount; i++) {
+    ds.push(parseFloat(req.body['ds'+i]) || 0);
+  }
   const rawTotal = parseFloat(attendance) + ds.reduce((a,b)=>a+b,0) + parseFloat(bigExam);
-  await Grade.findOneAndUpdate({studentId,semester},{studentId,semester,attendance:parseFloat(attendance),ds,bigExam:parseFloat(bigExam),rawTotal,final60:(rawTotal/100)*60},{upsert:true,new:true});
+  const maxRaw = 10 + dsCount * 10 + 50;
+  const final60 = maxRaw > 0 ? (rawTotal / maxRaw) * 60 : 0;
+  await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:parseFloat(attendance),ds,bigExam:parseFloat(bigExam),rawTotal,final60},{upsert:true,new:true});
   res.redirect(req.headers.referer||'/teacher/grades');
 }));
 
