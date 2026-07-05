@@ -7,51 +7,51 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <div class="portal-container" style="max-width:1200px;margin:0 auto;padding:20px">
+  <div class="portal-container">
     <div class="portal-header">
       <h1><i class="fas fa-graduation-cap"></i> École Officielle Ehmej · <%= selectedClass||'Student Portal' %></h1>
       <% if (isGradeLanding) { %>
-        <p style="margin-bottom:0;opacity:.9">Open the page for your class to see announcements and exercises.</p>
+        <p>Open the page for your class to see announcements and exercises.</p>
       <% } else { %>
-        <p style="margin-bottom:0;opacity:.9">Access announcements and exercises for <%= selectedClass %>.</p>
+        <p>Access announcements and exercises for <%= selectedClass %>.</p>
       <% } %>
     </div>
-    <div class="portal-quote" style="background:#fcf9f5;border:1px solid #e8ddd0;border-radius:10px;padding:.75rem 1rem;margin-bottom:1.5rem">
+    <div class="portal-quote">
       <p class="quote-banner-label">Daily Mathematical Thought</p>
       <p class="quote-banner-text">"<%= dailyMathQuote.text %>"</p>
       <p class="quote-banner-author"><%= dailyMathQuote.author %></p>
     </div>
     <% if (isGradeLanding) { %>
-      <div class="portal-directory" style="margin-top:2rem;background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 10px 24px rgba(11,42,74,.08)">
+      <div class="portal-directory">
         <h2>Select Your Class</h2>
-        <ul style="list-style:none;padding:0;margin:1rem 0 0">
+        <ul>
           <% classes.forEach(c => { %>
-            <li style="margin-top:.85rem"><a href="/portal/<%= c.toLowerCase().replace(' ','-') %>" style="color:#0b2a4a;text-decoration:none;font-weight:700"><%= c %></a></li>
+            <li><a href="/portal/<%= c.toLowerCase().replace(' ','-') %>"><%= c %></a></li>
           <% }) %>
         </ul>
       </div>
     <% } else { %>
-      <div class="portal-filters" style="background:#fff;border-radius:12px;padding:1rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+      <div class="portal-filters">
         <form method="GET" action="<%= portalPath %>" class="filter-form">
           <label for="monthInput"><i class="fas fa-calendar"></i> Month:</label>
           <input type="month" name="month" id="monthInput" value="<%= month||'' %>">
           <label for="semesterInput"><i class="fas fa-book"></i> Semester:</label>
           <input type="number" name="semester" id="semesterInput" placeholder="1-4" min="1" max="4" value="<%= semester||'' %>">
           <button type="submit"><i class="fas fa-filter"></i> Filter</button>
-          <a href="<%= portalPath %>" class="clear-btn" style="padding:8px 20px;background:#e74c3c;color:#fff;text-decoration:none;border-radius:6px"><i class="fas fa-times"></i> Clear</a>
+          <a href="<%= portalPath %>" class="clear-btn"><i class="fas fa-times"></i> Clear</a>
         </form>
       </div>
       <div class="portal-content">
-        <div class="portal-section" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+        <div class="portal-section">
           <h2 style="color:#0b2a4a;border-bottom:3px solid #0b2a4a;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-bullhorn"></i> Announcements</h2>
           <% if (announcements&&announcements.length>0) { %>
             <% announcements.forEach(a => { %>
               <div class="portal-item">
                 <h3><%= a.title %></h3>
                 <p><%= a.content %></p>
-                <div class="meta" style="color:#777;font-size:.85rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem">
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-tag"></i> <%= a.className %></span>
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-clock"></i> <%= new Date(a.createdAt).toLocaleDateString() %></span>
+                <div class="meta">
+                  <span><i class="fas fa-tag"></i> <%= a.className %></span>
+                  <span><i class="fas fa-clock"></i> <%= new Date(a.createdAt).toLocaleDateString() %></span>
                 </div>
               </div>
             <% }) %>
@@ -59,7 +59,7 @@
             <div class="no-items" style="color:#999;text-align:center;padding:2rem;font-style:italic"><i class="fas fa-info-circle"></i><p>No announcements available.</p></div>
           <% } %>
         </div>
-        <div class="portal-section" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05)">
+        <div class="portal-section">
           <h2 style="color:#0b2a4a;border-bottom:3px solid #0b2a4a;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-file-download"></i> Exercises</h2>
           <% if (exercises&&exercises.length>0) { %>
             <% exercises.forEach(e => { %>
@@ -71,10 +71,10 @@
                 <% } else { %>
                   <span style="color:#999;font-size:.9rem"><i class="fas fa-file"></i> No file attached</span>
                 <% } %>
-                <div class="meta" style="color:#777;font-size:.85rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem">
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-tag"></i> <%= e.className %></span>
-                  <% if (e.semester) { %><span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-book"></i> Semester <%= e.semester %></span><% } %>
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-clock"></i> <%= new Date(e.createdAt).toLocaleDateString() %></span>
+                <div class="meta">
+                  <span><i class="fas fa-tag"></i> <%= e.className %></span>
+                  <% if (e.semester) { %><span><i class="fas fa-book"></i> Semester <%= e.semester %></span><% } %>
+                  <span><i class="fas fa-clock"></i> <%= new Date(e.createdAt).toLocaleDateString() %></span>
                 </div>
               </div>
             <% }) %>
@@ -83,7 +83,7 @@
           <% } %>
         </div>
         <!-- Quizzes Section -->
-        <div class="portal-section" style="background:#fff;border-radius:12px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05);margin-top:1.5rem;grid-column:span 2">
+        <div class="portal-section" style="margin-top:1.5rem;grid-column:span 2">
           <h2 style="color:#0b2a4a;border-bottom:3px solid #b8944e;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-question-circle"></i> Quizzes</h2>
           <% if (quizzes&&quizzes.length>0) { %>
             <% quizzes.forEach(q => { %>
@@ -93,9 +93,9 @@
                 <div class="quiz-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.5rem">
                   <a href="/portal/quiz/<%= q._id %>" class="download-btn" style="display:inline-block;padding:6px 16px;background:#0b2a4a;color:#fff;text-decoration:none;border-radius:6px;font-size:.9rem;transition:.2s"><i class="fas fa-pencil-alt"></i> Take Quiz</a>
                 </div>
-                <div class="meta" style="color:#777;font-size:.85rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem">
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-tag"></i> <%= q.className %></span>
-                  <span style="background:#e9ecef;padding:2px 10px;border-radius:12px"><i class="fas fa-clock"></i> <%= new Date(q.createdAt).toLocaleDateString() %></span>
+                <div class="meta">
+                  <span><i class="fas fa-tag"></i> <%= q.className %></span>
+                  <span><i class="fas fa-clock"></i> <%= new Date(q.createdAt).toLocaleDateString() %></span>
                 </div>
               </div>
             <% }) %>
@@ -117,7 +117,7 @@
       </div>
     <% } %>
     <div style="text-align:center;margin-top:3rem;padding:2rem 0;color:#999;border-top:1px solid #e9ecef">
-      <a href="https://wa.me/96181239091" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.5rem;background:#25d366;color:#fff;padding:10px 24px;border-radius:50px;text-decoration:none;font-weight:700;font-size:.95rem;margin-bottom:1rem;transition:.3s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"><i class="fab fa-whatsapp" style="font-size:1.3rem"></i> Chat WhatsApp</a>
+      <a href="https://wa.me/96181239091" target="_blank" rel="noopener" class="whatsapp-btn"><i class="fab fa-whatsapp" style="font-size:1.3rem"></i> Chat WhatsApp</a>
       <p>&copy; 2026 École Officielle Ehmej · Maths Platform</p>
     </div>
   </div>
