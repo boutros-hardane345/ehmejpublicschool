@@ -7,7 +7,7 @@
   <div class="page-hero">
     <p class="eyebrow">Assessment Center</p>
     <h1><i class="fas fa-table"></i> Semester Grades</h1>
-    <p>Enter scores for each period. S1/S2/S3/S4 use attendance /6, DS /8 each, Big Exam /30. Mid-Year and Final-Year are one grade /60.</p>
+    <p>Enter scores for each period. S1/S2/S3/S4: attendance /10 (→/6), DS /10 each (→/8), Big Exam /20 (→/30). Mid-Year and Final-Year are one grade /60.</p>
   </div>
   <form method="GET" action="/teacher/grades" class="filter-section">
     <label for="cf"><i class="fas fa-filter"></i> Class:</label>
@@ -26,16 +26,12 @@
     <form method="POST" action="/teacher/grades" class="grade-form" id="gradeForm">
       <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
       <select name="semester" id="entryPeriod" required onchange="toggleGradeFields()"><option value="">Period</option><% periods.forEach(p=>{%><option value="<%=p%>"><%=periodLabels[p]%></option><%})%></select>
-      <div id="regularFields">
-        <input type="number" name="attendance" placeholder="Attendance /6" min="0" max="6" step="0.5" required>
-        <input type="number" name="ds1" placeholder="DS1 /8" min="0" max="8" step="0.5" required>
-        <input type="number" name="ds2" placeholder="DS2 /8" min="0" max="8" step="0.5" required>
-        <input type="number" name="ds3" placeholder="DS3 /8" min="0" max="8" step="0.5" required>
-        <input type="number" name="bigExam" placeholder="Big Exam /30" min="0" max="30" step="0.5" required>
-      </div>
-      <div id="simpleField" style="display:none">
-        <input type="number" name="bigExam" id="simpleExam" placeholder="Grade /60" min="0" max="60" step="0.5" required>
-      </div>
+      <input type="number" name="attendance" id="fAtt" placeholder="Attendance /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="ds1" id="fDs1" placeholder="DS1 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="ds2" id="fDs2" placeholder="DS2 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="ds3" id="fDs3" placeholder="DS3 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="bigExam" id="fExam" placeholder="Big Exam /20" min="0" max="20" step="0.5" required>
+      <input type="number" name="bigExam" id="fSimpleExam" placeholder="Grade /60" min="0" max="60" step="0.5" style="display:none">
       <button type="submit"><i class="fas fa-save"></i> Save Grade</button>
     </form>
   </section>
@@ -85,20 +81,26 @@
 <script>
 function toggleGradeFields() {
   var v = parseInt(document.getElementById('entryPeriod').value);
-  var regular = document.getElementById('regularFields');
-  var simple = document.getElementById('simpleField');
-  if (v === 3 || v === 6) {
-    regular.style.display = 'none';
-    simple.style.display = 'flex';
-    regular.querySelectorAll('input').forEach(function(el){ el.required = false; });
-    simple.querySelector('input').required = true;
-  } else {
-    regular.style.display = 'flex';
+  var ids = ['fAtt','fDs1','fDs2','fDs3','fExam'];
+  var simple = document.getElementById('fSimpleExam');
+  var isSimple = v === 3 || v === 6;
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    el.style.display = isSimple ? 'none' : '';
+    el.disabled = isSimple;
+    el.required = !isSimple;
+  });
+  simple.style.display = isSimple ? '' : 'none';
+  simple.disabled = !isSimple;
+  simple.required = isSimple;
+  if (!v) {
+    ids.forEach(function(id) {
+      document.getElementById(id).style.display = '';
+      document.getElementById(id).disabled = false;
+    });
     simple.style.display = 'none';
-    regular.querySelectorAll('input').forEach(function(el){ el.required = true; });
-    simple.querySelector('input').required = false;
+    simple.disabled = true;
   }
-  if (!v) { regular.style.display = 'flex'; simple.style.display = 'none'; }
 }
 function exportGradesPDF(){const p=new URLSearchParams({class:document.getElementById('cf').value,year:document.getElementById('yf').value,semester:document.getElementById('pf').value});window.location.href='/teacher/export-semester-pdf?'+p.toString()}
 </script>

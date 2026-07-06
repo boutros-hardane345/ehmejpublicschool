@@ -240,10 +240,13 @@ app.post('/teacher/grades', isAuth, h(async (req, res) => {
   } else {
     const ds = [];
     for (let i = 1; i <= 3; i++) {
-      ds.push(parseScore(req.body['ds'+i], 8));
+      const dsRaw = parseScore(req.body['ds'+i], 10);
+      ds.push((dsRaw / 10) * 8);
     }
-    const att = parseScore(attendance, 6);
-    const exam = parseScore(bigExam, 30);
+    const attRaw = parseScore(attendance, 10);
+    const att = (attRaw / 10) * 6;
+    const examRaw = parseScore(bigExam, 20);
+    const exam = (examRaw / 20) * 30;
     const rawTotal = att + ds.reduce((a,b)=>a+b,0) + exam;
     const final60 = rawTotal;
     await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:att,ds,bigExam:exam,rawTotal,final60},{upsert:true,new:true});
