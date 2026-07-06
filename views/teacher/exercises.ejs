@@ -19,7 +19,7 @@
       <% exercises.forEach(e=>{%>
         <tr>
           <td><%=e.title%></td><td><%=e.className%></td><td><%=e.semester||'N/A'%></td>
-          <td><% if(e.fileUrl){%><a href="<%=e.fileUrl%>" target="_blank"><i class="fas fa-file"></i> Download</a><%}%></td>
+          <td><% if(e.fileUrl){%><a href="/download/<%=e._id%>"><i class="fas fa-file"></i> Download</a><%}%></td>
           <td><form method="POST" action="/teacher/exercises/delete/<%=e._id%>" style="display:inline"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></button></form></td>
         </tr>
       <%})%>

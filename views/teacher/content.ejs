@@ -65,7 +65,7 @@
           <article class="feed-item exercise-item">
             <div class="feed-topline"><span class="class-badge"><%= e.className %></span><span class="muted-text"><%= e.createdAt.toLocaleDateString() %></span></div>
             <h3><%= e.title %></h3><p><%= e.description||'No description provided.' %></p>
-            <div class="feed-tags"><span><i class="fas fa-book"></i> <%= e.semester?`Semester ${e.semester}`:'No semester' %></span><% if (e.fileUrl) { %><a href="<%= e.fileUrl %>" target="_blank"><i class="fas fa-file"></i> Open</a><% } %></div>
+            <div class="feed-tags"><span><i class="fas fa-book"></i> <%= e.semester?`Semester ${e.semester}`:'No semester' %></span><% if (e.fileUrl) { %><a href="/download/<%= e._id %>"><i class="fas fa-file"></i> Open</a><% } %></div>
             <form method="POST" action="/teacher/exercises/delete/<%= e._id %>" class="inline-action-form"><button type="submit" class="btn-delete" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i> Delete</button></form>
           </article>
         <% }) %>

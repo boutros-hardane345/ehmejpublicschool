@@ -61,7 +61,7 @@ const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floo
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Session
 app.use(session({
@@ -215,6 +215,16 @@ app.post('/teacher/exercises', isAuth, upload.single('file'), h(async (req, res)
 app.post('/teacher/exercises/delete/:id', isAuth, h(async (req, res) => {
   await Exercise.findByIdAndDelete(req.params.id);
   res.redirect(req.headers.referer||'/teacher/content');
+}));
+
+// Download exercise file
+app.get('/download/:id', h(async (req, res) => {
+  const exercise = await Exercise.findById(req.params.id);
+  if (!exercise || !exercise.fileUrl) return res.status(404).send('File not found');
+  const filePath = path.join(__dirname, exercise.fileUrl.replace(/^\//, ''));
+  if (!require('fs').existsSync(filePath)) return res.status(404).send('File not found on server');
+  const fileName = exercise.fileUrl.split('/').pop();
+  res.download(filePath, fileName);
 }));
 
 // Grades
