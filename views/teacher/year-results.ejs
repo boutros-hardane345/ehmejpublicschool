@@ -7,19 +7,15 @@
   <div class="page-hero">
     <p class="eyebrow">Annual Overview</p>
     <h1><i class="fas fa-chart-line"></i> Year Results</h1>
-    <p>Combines semester grades with separately entered mid-year and final-year exam scores.</p>
+    <p>Combines all 6 grading periods (S1, S2, Mid-Year, S3, S4, Final-Year) into a final average. Pass ≥ 50, Borderline ≥ 40, Fail < 40.</p>
   </div>
   <form method="GET" action="/teacher/year-results" class="filter-section">
     <label for="cf"><i class="fas fa-filter"></i> Class:</label>
     <select id="cf" name="class"><option value="all">All</option><% classes.forEach(c=>{%><option value="<%=c%>" <%=selectedClass===c?'selected':''%>><%=c%></option><%})%></select>
     <label for="yf"><i class="fas fa-calendar"></i> Year:</label>
     <select id="yf" name="year"><% academicYears.forEach(y=>{%><option value="<%=y%>" <%=selectedYear===y?'selected':''%>><%=y%></option><%})%></select>
-    <label><i class="fas fa-snowflake"></i> Mid-Year:</label>
-    <select name="midExam"><option value="all" <%=selectedMidExamFilter==='all'?'selected':''%>>All</option><option value="entered" <%=selectedMidExamFilter==='entered'?'selected':''%>>Entered</option><option value="missing" <%=selectedMidExamFilter==='missing'?'selected':''%>>Missing</option></select>
-    <label><i class="fas fa-seedling"></i> Final-Year:</label>
-    <select name="finalExam"><option value="all" <%=selectedFinalExamFilter==='all'?'selected':''%>>All</option><option value="entered" <%=selectedFinalExamFilter==='entered'?'selected':''%>>Entered</option><option value="missing" <%=selectedFinalExamFilter==='missing'?'selected':''%>>Missing</option></select>
-    <label><i class="fas fa-signal"></i> Status:</label>
-    <select name="status"><option value="all" <%=selectedStatusFilter==='all'?'selected':''%>>All</option><option value="pass" <%=selectedStatusFilter==='pass'?'selected':''%>>Passing</option><option value="border" <%=selectedStatusFilter==='border'?'selected':''%>>Borderline</option><option value="fail" <%=selectedStatusFilter==='fail'?'selected':''%>>Failing</option></select>
+    <label for="sf"><i class="fas fa-signal"></i> Status:</label>
+    <select id="sf" name="status"><option value="all" <%=selectedStatusFilter==='all'?'selected':''%>>All</option><option value="pass" <%=selectedStatusFilter==='pass'?'selected':''%>>Passing</option><option value="border" <%=selectedStatusFilter==='border'?'selected':''%>>Borderline</option><option value="fail" <%=selectedStatusFilter==='fail'?'selected':''%>>Failing</option></select>
     <button type="submit"><i class="fas fa-search"></i> View</button>
     <button type="button" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button>
   </form>
@@ -29,19 +25,24 @@
     <div class="stat-card"><span>Borderline</span><strong><%= summary.borderline %></strong></div>
     <div class="stat-card"><span>Failing</span><strong><%= summary.failing %></strong></div>
   </div>
-  <div class="year-guide"><p><strong>How scores work:</strong> Semester grades (1-4) are entered on the Grades page. Mid-Year and Final-Year exam scores are entered separately on the Grades page. The year average combines all six scores.</p></div>
   <div class="table-responsive">
     <table class="year-results-table">
       <thead>
-        <tr><th rowspan="2">Student</th><th rowspan="2">Class</th><th rowspan="2">Year</th><th colspan="3" class="season-head winter-head">Winter / Christmas</th><th colspan="3" class="season-head spring-head">Spring / Easter</th><th colspan="2">Cumulative</th></tr>
-        <tr><th class="winter-head">S1</th><th class="winter-head">S2</th><th class="winter-head">Mid</th><th class="spring-head">S3</th><th class="spring-head">S4</th><th class="spring-head">Fin</th><th>Avg</th><th>Status</th></tr>
+        <tr>
+          <th rowspan="2">Student</th><th rowspan="2">Class</th><th rowspan="2">Year</th>
+          <th colspan="6" class="season-head">Period Scores</th>
+          <th colspan="2">Cumulative</th>
+        </tr>
+        <tr>
+          <th>S1</th><th>S2</th><th>Mid</th><th>S3</th><th>S4</th><th>Final</th><th>Avg</th><th>Status</th>
+        </tr>
       </thead>
       <tbody>
         <% results.forEach(r=>{const a=r.yearAverage;let sc='avg-fail',st='Failing',bc='status-fail';if(a>=50){sc='avg-pass';st='Passing';bc='status-pass'}else if(a>=40){sc='avg-border';st='Borderline';bc='status-border'}%>
           <tr>
             <td><%=r.student.name%></td><td><span class="class-badge"><%=r.student.className%></span></td><td><%=r.student.academicYear||'Not set'%></td>
-            <td><%=r.sem1.toFixed(1)%></td><td><%=r.sem2.toFixed(1)%></td><td><%=r.midYearExam.toFixed(1)%></td>
-            <td><%=r.sem3.toFixed(1)%></td><td><%=r.sem4.toFixed(1)%></td><td><%=r.finalYearExam.toFixed(1)%></td>
+            <td><%=r.s1.toFixed(1)%></td><td><%=r.s2.toFixed(1)%></td><td><%=r.mid.toFixed(1)%></td>
+            <td><%=r.s3.toFixed(1)%></td><td><%=r.s4.toFixed(1)%></td><td><%=r.fin.toFixed(1)%></td>
             <td class="<%=sc%>"><%=r.yearAverage.toFixed(1)%></td>
             <td><span class="status-badge <%=bc%>"><%=st%></span></td>
           </tr>

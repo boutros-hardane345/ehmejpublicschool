@@ -7,138 +7,60 @@
   <div class="page-hero">
     <p class="eyebrow">Assessment Center</p>
     <h1><i class="fas fa-table"></i> Semester Grades</h1>
-    <p>Record term marks for each semester. Enter mid-year and final-year exam scores in the dedicated panels below.</p>
+    <p>Enter scores for each period. Attendance /6, DS /10 each, Big Exam /20. Final score is converted to /60.</p>
   </div>
   <form method="GET" action="/teacher/grades" class="filter-section">
     <label for="cf"><i class="fas fa-filter"></i> Class:</label>
     <select id="cf" name="class"><option value="all">All</option><% classes.forEach(c=>{%><option value="<%=c%>" <%=selectedClass===c?'selected':''%>><%=c%></option><%})%></select>
     <label for="yf"><i class="fas fa-calendar"></i> Year:</label>
     <select id="yf" name="year"><% academicYears.forEach(y=>{%><option value="<%=y%>" <%=selectedYear===y?'selected':''%>><%=y%></option><%})%></select>
-    <label for="sf"><i class="fas fa-book"></i> Semester:</label>
-    <select id="sf" name="semester"><option value="all">All</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>" <%=selectedSemester===String(s)?'selected':''%>>Semester <%=s%></option><%})%></select>
+    <label for="pf"><i class="fas fa-book"></i> Period:</label>
+    <select id="pf" name="semester">
+      <% periods.forEach(p=>{%><option value="<%=p%>" <%=selectedSemester===String(p)?'selected':''%>><%=periodLabels[p]%></option><%})%>
+    </select>
     <button type="submit"><i class="fas fa-search"></i> View</button>
+    <button type="button" onclick="exportGradesPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button>
   </form>
-  <% if (selectedClass!=='all') { %>
-    <div class="filter-section" style="background:linear-gradient(135deg,#fcf7ef,#fff);border-color:#e0d3c0">
-      <label><i class="fas fa-sliders-h"></i> Devoirs Surveillés count per semester:</label>
-      <% [1,2,3,4].forEach(s => { %>
-        <form method="POST" action="/teacher/grades/ds-count" style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .5rem;margin:0;background:transparent;box-shadow:none;border:none">
-          <input type="hidden" name="className" value="<%= selectedClass %>">
-          <input type="hidden" name="semester" value="<%= s %>">
-          <span style="font-size:.82rem;color:#4a3f33;font-weight:600">S<%= s %>:</span>
-          <select name="dsCount" onchange="this.form.submit()" style="padding:4px 8px;border:2px solid #e0d3c0;border-radius:6px;font-size:.82rem;min-width:auto;width:auto">
-            <% [2,3,4].forEach(n => { %>
-              <option value="<%= n %>" <%= getDsCount(selectedClass,s)===n?'selected':'' %>><%= n %></option>
-            <% }) %>
-          </select>
-        </form>
-      <% }) %>
-    </div>
-  <% } %>
   <section class="panel-card">
-    <div class="section-heading"><h2><i class="fas fa-edit"></i> Grade Entry</h2><p>Select student and semester, then enter scores.</p></div>
-    <form method="POST" action="/teacher/grades" class="grade-form" id="gradeForm">
-      <select name="studentId" id="studentSelect" required onchange="updateDsFields()"><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>" data-class="<%=s.className%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
-      <select name="semester" id="semesterSelect" required onchange="updateDsFields()"><option value="">Semester</option><% [1,2,3,4].forEach(s=>{%><option value="<%=s%>">Semester <%=s%></option><%})%></select>
-      <input type="number" name="attendance" placeholder="Attendance /10" min="0" max="10" step="0.5" required>
-      <div id="dsFields"></div>
-      <input type="number" name="bigExam" placeholder="Big Exam /50" min="0" max="50" step="0.5" required>
+    <div class="section-heading"><h2><i class="fas fa-edit"></i> Grade Entry</h2><p>Select student and period, then enter scores.</p></div>
+    <form method="POST" action="/teacher/grades" class="grade-form">
+      <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
+      <select name="semester" required><option value="">Period</option><% periods.forEach(p=>{%><option value="<%=p%>"><%=periodLabels[p]%></option><%})%></select>
+      <input type="number" name="attendance" placeholder="Attendance /6" min="0" max="6" step="0.5" required>
+      <input type="number" name="ds1" placeholder="DS1 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="ds2" placeholder="DS2 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="ds3" placeholder="DS3 /10" min="0" max="10" step="0.5" required>
+      <input type="number" name="bigExam" placeholder="Big Exam /20" min="0" max="20" step="0.5" required>
       <button type="submit"><i class="fas fa-save"></i> Save Grade</button>
     </form>
   </section>
-  <div class="split-layout exam-split-layout">
-    <section class="panel-card seasonal-panel winter-panel">
-      <div class="section-heading"><h2><i class="fas fa-snowflake"></i> Mid-Year / Christmas Exam</h2><p>Enter the winter checkpoint exam score (/60).</p></div>
-      <form method="POST" action="/teacher/exam-results" class="stack-form">
-        <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
-        <input type="number" name="midYearExam" placeholder="Mid-Year Exam /60" min="0" max="60" step="0.5" required>
-        <button type="submit"><i class="fas fa-save"></i> Save Mid-Year Exam</button>
-      </form>
-    </section>
-    <section class="panel-card seasonal-panel spring-panel">
-      <div class="section-heading"><h2><i class="fas fa-seedling"></i> Final-Year / Easter Exam</h2><p>Enter the spring closing exam score (/60).</p></div>
-      <form method="POST" action="/teacher/exam-results" class="stack-form">
-        <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
-        <input type="number" name="finalYearExam" placeholder="Final-Year Exam /60" min="0" max="60" step="0.5" required>
-        <button type="submit"><i class="fas fa-save"></i> Save Final-Year Exam</button>
-      </form>
-    </section>
-  </div>
   <section class="panel-card">
-    <div class="section-heading"><h2><i class="fas fa-table"></i> Semester Grades</h2><p><%= grades.length %> grade<%= grades.length===1?'':'s' %> recorded.</p></div>
+    <div class="section-heading"><h2><i class="fas fa-table"></i> Grades — <%= periodLabels[parseInt(selectedSemester)]||'All Periods' %></h2><p><%= grades.length %> grade<%= grades.length===1?'':'s' %> recorded.</p></div>
     <div class="table-responsive">
-      <table id="gradesTable">
+      <table>
         <thead>
           <tr>
-            <th>Student</th><th>Class</th><th>Year</th><th>Sem</th><th>Att</th>
-            <th id="dsHeader1">DS1</th><th id="dsHeader2">DS2</th><th id="dsHeader3">DS3</th><th id="dsHeader4">DS4</th>
-            <th>Exam</th><th>Raw</th><th>Final</th>
+            <th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Att /6</th>
+            <th>DS1 /10</th><th>DS2 /10</th><th>DS3 /10</th>
+            <th>Exam /20</th><th>Raw</th><th>Final /60</th>
           </tr>
         </thead>
         <tbody>
           <% grades.forEach(g=>{const s=students.find(s=>s._id.toString()===g.studentId.toString());if(!s)return;%>
             <tr>
               <td><%=s.name%></td><td><span class="class-badge"><%=s.className%></span></td><td><%=s.academicYear||'Not set'%></td>
-              <td>S<%=g.semester%></td><td><%=g.attendance%></td>
-              <td><%=g.ds[0]||0%></td><td><%=g.ds[1]||0%></td><td><%=g.ds[2]||0%></td><td><%=g.ds[3]||0%></td>
+              <td><%=periodLabels[g.semester]||'S'+g.semester%></td><td><%=g.attendance%></td>
+              <td><%=g.ds[0]||0%></td><td><%=g.ds[1]||0%></td><td><%=g.ds[2]||0%></td>
               <td><%=g.bigExam%></td><td><strong><%=g.rawTotal%></strong></td>
               <td><strong class="final-grade"><%=g.final60.toFixed(1)%></strong></td>
             </tr>
           <%})%>
-          <% if (grades.length===0) { %><tr><td colspan="12" class="text-center">No semester grades saved.</td></tr><% } %>
-        </tbody>
-      </table>
-    </div>
-  </section>
-  <section class="panel-card">
-    <div class="section-heading"><h2><i class="fas fa-award"></i> Saved Exam Results</h2><p><%= examResults.length %> record<%= examResults.length===1?'':'s' %>.</p></div>
-    <div class="table-responsive">
-      <table>
-        <thead><tr><th>Student</th><th>Class</th><th>Year</th><th>Mid-Year /60</th><th>Final-Year /60</th></tr></thead>
-        <tbody>
-          <% examResults.forEach(ex=>{const s=students.find(s=>s._id.toString()===ex.studentId.toString());if(!s)return;%>
-            <tr>
-              <td><%=s.name%></td><td><span class="class-badge"><%=s.className%></span></td><td><%=s.academicYear||'Not set'%></td>
-              <td><strong class="winter-score"><%=ex.midYearExam.toFixed(1)%></strong></td>
-              <td><strong class="spring-score"><%=ex.finalYearExam.toFixed(1)%></strong></td>
-            </tr>
-          <%})%>
-          <% if (examResults.length===0) { %><tr><td colspan="5" class="text-center">No exam records saved.</td></tr><% } %>
+          <% if (grades.length===0) { %><tr><td colspan="11" class="text-center">No grades saved for this period.</td></tr><% } %>
         </tbody>
       </table>
     </div>
   </section>
 </div>
-<script>
-var dsCountMap = {};
-<% classes.forEach(function(c) { [1,2,3,4].forEach(function(s) { %>
-  dsCountMap['<%= c %>-<%= s %>'] = <%= getDsCount(c, s) %>;
-<% }) }) %>
-
-function getDsCountForClassSem(className, semester) {
-  return dsCountMap[className + '-' + semester] || 4;
-}
-
-function updateDsFields() {
-  var semSelect = document.getElementById('semesterSelect');
-  var studentSelect = document.getElementById('studentSelect');
-  var container = document.getElementById('dsFields');
-  var sem = parseInt(semSelect.value);
-  if (!sem) { container.innerHTML = ''; return; }
-  var opt = studentSelect.options[studentSelect.selectedIndex];
-  var className = opt && opt.value ? opt.getAttribute('data-class') : '';
-  var dsCount = className ? getDsCountForClassSem(className, sem) : 4;
-  container.innerHTML = '';
-  for (var i = 1; i <= dsCount; i++) {
-    var inp = document.createElement('input');
-    inp.type = 'number';
-    inp.name = 'ds' + i;
-    inp.placeholder = 'DS ' + i + ' /10';
-    inp.min = 0; inp.max = 10; inp.step = 0.5;
-    container.appendChild(inp);
-  }
-}
-updateDsFields();
-</script>
+<script>function exportGradesPDF(){const p=new URLSearchParams({class:document.getElementById('cf').value,year:document.getElementById('yf').value,semester:document.getElementById('pf').value});window.location.href='/teacher/export-semester-pdf?'+p.toString()}</script>
 </body>
 </html>

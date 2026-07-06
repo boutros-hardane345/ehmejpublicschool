@@ -20,7 +20,7 @@
     </div>
     <div class="table-responsive">
       <table class="compact-table">
-        <thead><tr><th>Class</th><th>Students</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th></tr></thead>
+        <thead><tr><th>Class</th><th>Students</th><th>S1</th><th>S2</th><th>Mid</th><th>S3</th><th>S4</th><th>Final</th></tr></thead>
         <tbody>
           <% classAverages.forEach(c => { %>
             <tr>
@@ -31,7 +31,7 @@
               <% }) %>
             </tr>
           <% }) %>
-          <% if (classAverages.every(c=>c.count===0)) { %><tr><td colspan="6" class="text-center">No students enrolled.</td></tr><% } %>
+          <% if (classAverages.every(c=>c.count===0)) { %><tr><td colspan="8" class="text-center">No students enrolled.</td></tr><% } %>
         </tbody>
       </table>
     </div>

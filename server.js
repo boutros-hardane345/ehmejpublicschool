@@ -14,9 +14,6 @@ const Student = require('./models/Student');
 const Announcement = require('./models/Announcement');
 const Exercise = require('./models/Exercise');
 const Grade = require('./models/Grade');
-const ExamResult = require('./models/ExamResult');
-const GradeActivity = require('./models/GradeActivity');
-const SemesterConfig = require('./models/SemesterConfig');
 
 const CLASSES = ['Grade 7', 'Grade 8', 'Grade 9'];
 const MATH_QUOTES = [
@@ -126,25 +123,25 @@ app.get('/logout', (req, res) => {
 // Dashboard
 app.get('/teacher/dashboard', isAuth, h(async (req, res) => {
   const currentYear = getCurrentAcademicYear();
-  const [students, allGrades, allExamResults, announcements, exercises] = await Promise.all([
-    Student.find(), Grade.find(), ExamResult.find(),
+  const [students, allGrades, announcements, exercises] = await Promise.all([
+    Student.find(), Grade.find(),
     Announcement.find().sort({createdAt:-1}).limit(5),
     Exercise.find().sort({createdAt:-1}).limit(5)
   ]);
   const classBreakdown = CLASSES.map(c => ({className:c, count:students.filter(s=>s.className===c).length}));
-  const semesterAverages = [1,2,3,4].map(sem => {
+  const semesterAverages = [1,2,3,4,5,6].map(sem => {
     const gs = allGrades.filter(g=>g.semester===sem);
     return {semester:sem, count:gs.length, average:gs.length ? Math.round(gs.reduce((a,g)=>a+g.final60,0)/gs.length*10)/10 : 0};
   });
   const classAverages = CLASSES.map(c => {
     const ids = students.filter(s=>s.className===c).map(s=>s._id);
     const cg = allGrades.filter(g=>ids.some(id=>id.equals(g.studentId)));
-    return {className:c, count:ids.length, semesters:[1,2,3,4].map(sem=>{
+    return {className:c, count:ids.length, semesters:[1,2,3,4,5,6].map(sem=>{
       const sg = cg.filter(g=>g.semester===sem);
       return sg.length ? Math.round(sg.reduce((a,g)=>a+g.final60,0)/sg.length*10)/10 : 0;
     })};
   });
-  const overallAverage = semesterAverages.reduce((s,x)=>s+x.average,0)/4;
+  const overallAverage = semesterAverages.reduce((s,x)=>s+x.average,0)/6;
   res.render('teacher/dashboard', {students,announcements,exercises,currentYear,classBreakdown,classAverages,semesterAverages,overallAverage});
 }));
 
@@ -170,8 +167,7 @@ app.post('/teacher/students/delete/:id', isAuth, h(async (req, res) => {
 
 app.post('/teacher/students/delete-all', isAuth, h(async (req, res) => {
   await Student.deleteMany({});
-  await Grade.updateMany({},{$set:{attendance:0,ds:[0,0,0,0],bigExam:0,rawTotal:0,final60:0}});
-  await ExamResult.updateMany({},{$set:{midYearExam:0,finalYearExam:0}});
+  await Grade.updateMany({},{$set:{attendance:0,ds:[0,0,0],bigExam:0,rawTotal:0,final60:0}});
   res.redirect('/teacher/students');
 }));
 
@@ -221,99 +217,57 @@ app.post('/teacher/exercises/delete/:id', isAuth, h(async (req, res) => {
   res.redirect(req.headers.referer||'/teacher/content');
 }));
 
-// DS Count
-app.post('/teacher/grades/ds-count', isAuth, h(async (req, res) => {
-  const {className,semester,dsCount} = req.body;
-  await SemesterConfig.findOneAndUpdate(
-    {className,semester:parseInt(semester)},
-    {className,semester:parseInt(semester),dsCount:parseInt(dsCount)},
-    {upsert:true,new:true}
-  );
-  res.redirect(req.headers.referer||'/teacher/grades');
-}));
-
 // Grades
 app.get('/teacher/grades', isAuth, h(async (req, res) => {
-  const selectedClass = req.query.class||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedSemester = req.query.semester||'all';
+  const selectedClass = req.query.class||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedSemester = req.query.semester||'1';
   const students = await Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({academicYear:-1,className:1,name:1});
   const studentIds = students.map(s=>s._id);
   let grades = await Grade.find({studentId:{$in:studentIds}});
-  const examResults = await ExamResult.find({studentId:{$in:studentIds}});
   const sn = parseInt(selectedSemester,10);
-  if (!isNaN(sn)&&sn>=1&&sn<=4) grades = grades.filter(g=>g.semester===sn);
+  const periods = [1,2,3,4,5,6];
+  const periodLabels = {1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'};
+  if (!isNaN(sn)&&periods.includes(sn)) grades = grades.filter(g=>g.semester===sn);
   const academicYears = await getAcademicYears(selectedYear);
-  let dsCounts = {};
-  if (selectedClass!=='all' && !isNaN(sn) && sn>=1 && sn<=4) {
-    const cfg = await SemesterConfig.findOne({className:selectedClass,semester:sn});
-    if (cfg) dsCounts[`${selectedClass}-${sn}`] = cfg.dsCount;
-  } else if (selectedClass!=='all') {
-    const cfgs = await SemesterConfig.find({className:selectedClass});
-    cfgs.forEach(c => { dsCounts[`${selectedClass}-${c.semester}`] = c.dsCount; });
-  }
-  const getDsCount = (className, semester) => dsCounts[`${className}-${semester}`] || 4;
-  res.render('teacher/grades', {students,grades,examResults,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedSemester,getDsCount});
+  res.render('teacher/grades', {students,grades,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedSemester,periods,periodLabels});
 }));
 
 app.post('/teacher/grades', isAuth, h(async (req, res) => {
   const {studentId,semester,attendance,bigExam} = req.body;
   const sn = parseInt(semester);
-  const student = await Student.findById(studentId);
-  const className = student ? student.className : '';
-  const cfg = await SemesterConfig.findOne({className,semester:sn});
-  const dsCount = cfg ? cfg.dsCount : 4;
   const ds = [];
-  for (let i = 1; i <= dsCount; i++) {
-    ds.push(parseFloat(req.body['ds'+i]) || 0);
+  for (let i = 1; i <= 3; i++) {
+    ds.push(parseScore(req.body['ds'+i], 10));
   }
-  const rawTotal = parseFloat(attendance) + ds.reduce((a,b)=>a+b,0) + parseFloat(bigExam);
-  const maxRaw = 10 + dsCount * 10 + 50;
-  const final60 = maxRaw > 0 ? (rawTotal / maxRaw) * 60 : 0;
-  await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:parseFloat(attendance),ds,bigExam:parseFloat(bigExam),rawTotal,final60},{upsert:true,new:true});
+  const att = parseScore(attendance, 6);
+  const exam = parseScore(bigExam, 20);
+  const rawTotal = att + ds.reduce((a,b)=>a+b,0) + exam;
+  const final60 = (rawTotal / 56) * 60;
+  await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:att,ds,bigExam:exam,rawTotal,final60},{upsert:true,new:true});
   res.redirect(req.headers.referer||'/teacher/grades');
 }));
 
 // Year Results
 app.get('/teacher/year-results', isAuth, h(async (req, res) => {
   const {class:className} = req.query;
-  const selectedClass = className||'all', selectedYear = req.query.year||getCurrentAcademicYear();
-  const selectedMidExamFilter = req.query.midExam||'all', selectedFinalExamFilter = req.query.finalExam||'all', selectedStatusFilter = req.query.status||'all';
-  const [students, allGrades, allExamResults] = await Promise.all([
+  const selectedClass = className||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedStatusFilter = req.query.status||'all';
+  const [students, allGrades] = await Promise.all([
     Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({name:1}),
-    Grade.find(), ExamResult.find()
+    Grade.find()
   ]);
   let results = students.map(student => {
-    const gs = [1,2,3,4].map(s => allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
-    const sem = gs.map(g=>g?g.final60:0);
-    const examResult = allExamResults.find(e=>e.studentId.equals(student._id));
-    const midYearExam = examResult?examResult.midYearExam:0, finalYearExam = examResult?examResult.finalYearExam:0;
-    const yearAverage = (sem[0]+sem[1]+midYearExam+sem[2]+sem[3]+finalYearExam)/6;
+    const periods = [1,2,3,4,5,6];
+    const gs = periods.map(s => allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
+    const scores = gs.map(g=>g?g.final60:0);
+    const yearAverage = scores.reduce((a,b)=>a+b,0)/6;
     let statusKey = 'fail';
     if (yearAverage>=50) statusKey='pass';
     else if (yearAverage>=40) statusKey='border';
-    return {student,sem1:sem[0],sem2:sem[1],midYearExam,sem3:sem[2],sem4:sem[3],finalYearExam,winterAverage:(sem[0]+sem[1]+midYearExam)/3,springAverage:(sem[2]+sem[3]+finalYearExam)/3,yearAverage,statusKey};
+    return {student,s1:scores[0],s2:scores[1],mid:scores[2],s3:scores[3],s4:scores[4],fin:scores[5],yearAverage,statusKey};
   });
-  results = results.filter(r => {
-    if (selectedMidExamFilter==='entered'&&r.midYearExam===0) return false;
-    if (selectedMidExamFilter==='missing'&&r.midYearExam>0) return false;
-    if (selectedFinalExamFilter==='entered'&&r.finalYearExam===0) return false;
-    if (selectedFinalExamFilter==='missing'&&r.finalYearExam>0) return false;
-    if (selectedStatusFilter!=='all'&&r.statusKey!==selectedStatusFilter) return false;
-    return true;
-  });
+  if (selectedStatusFilter!=='all') results = results.filter(r=>r.statusKey===selectedStatusFilter);
   const summary = {total:results.length,passing:results.filter(r=>r.statusKey==='pass').length,borderline:results.filter(r=>r.statusKey==='border').length,failing:results.filter(r=>r.statusKey==='fail').length};
   const academicYears = await getAcademicYears(selectedYear);
-  res.render('teacher/year-results', {results,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedMidExamFilter,selectedFinalExamFilter,selectedStatusFilter,summary});
-}));
-
-// Update Exam Results
-app.post('/teacher/exam-results', isAuth, h(async (req, res) => {
-  const {studentId,midYearExam,finalYearExam} = req.body;
-  const existing = await ExamResult.findOne({studentId});
-  const update = {studentId,updatedAt:new Date()};
-  update.midYearExam = req.body.midYearExam!==undefined ? parseScore(midYearExam,60) : (existing?existing.midYearExam:0);
-  update.finalYearExam = req.body.finalYearExam!==undefined ? parseScore(finalYearExam,60) : (existing?existing.finalYearExam:0);
-  await ExamResult.findOneAndUpdate({studentId},update,{upsert:true,new:true});
-  res.redirect(req.headers.referer||'/teacher/year-results');
+  res.render('teacher/year-results', {results,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedStatusFilter,summary});
 }));
 
 // ============ PDF EXPORT ============
@@ -344,9 +298,9 @@ app.get('/teacher/export-year-pdf', isAuth, h(async (req, res) => {
   doc.fillColor('black').fontSize(8).font('Helvetica');
   students.forEach((student,i) => {
     if (y>750) { doc.addPage(); y=50; drawHeader(y); y+=30; doc.fillColor('black').fontSize(8).font('Helvetica'); }
-    const gs = [1,2,3,4].map(s=>allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
+    const gs = [1,2,3,4,5,6].map(s=>allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
     const sem = gs.map(g=>g?g.final60:0);
-    const mid = (sem[0]+sem[1])/2, fin = (sem[2]+sem[3])/2, avg = (sem[0]+sem[1]+sem[2]+sem[3])/4;
+    const avg = sem.reduce((a,b)=>a+b,0)/6;
     const st = avg>=50?'Passing':avg>=40?'Borderline':'Failing';
     const sc = avg>=50?'#27ae60':avg>=40?'#f39c12':'#e74c3c';
     if (i%2===0) doc.rect(50,y-2,520,18).fill('#f8f9fa');
@@ -354,12 +308,67 @@ app.get('/teacher/export-year-pdf', isAuth, h(async (req, res) => {
     const name = student.name.length>12?student.name.slice(0,10)+'..':student.name;
     doc.text(name,cols[0],y);
     doc.text(student.className.replace('Grade ',''),cols[1],y);
-    [0,1,2,3].forEach(j=>doc.text(sem[j].toFixed(0),cols[2+j],y,{width:30,align:'center'}));
-    doc.text(mid.toFixed(0),cols[4],y,{width:30,align:'center'});
-    doc.text(fin.toFixed(0),cols[7],y,{width:30,align:'center'});
+    [0,1,2,3,4,5].forEach(j=>doc.text(sem[j].toFixed(0),cols[2+j],y,{width:30,align:'center'}));
     doc.font('Helvetica-Bold').fillColor('#27ae60').text(avg.toFixed(0),cols[8],y,{width:30,align:'center'});
     doc.font('Helvetica').fillColor(sc).text(st,cols[9],y,{width:50,align:'center'});
     doc.fillColor('black');
+    y += 22;
+  });
+  doc.moveDown(2);
+  doc.fontSize(8).font('Helvetica').fillColor('#666666').text('Generated by Maths Teacher Platform',{align:'center'});
+  doc.text(`Page ${doc.pageNumber}`,{align:'center'});
+  doc.end();
+}));
+
+// Semester PDF Export
+app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
+  const selectedClass = req.query.class||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedSemester = req.query.semester||'1';
+  const sn = parseInt(selectedSemester,10);
+  const periodLabels = {1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'};
+  const periodLabel = periodLabels[sn]||'Period '+sn;
+  const students = await Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({name:1});
+  const studentIds = students.map(s=>s._id);
+  const grades = await Grade.find({studentId:{$in:studentIds},semester:sn});
+  const doc = new PDFDocument({margin:50,size:'A4'});
+  res.setHeader('Content-Type','application/pdf');
+  res.setHeader('Content-Disposition','attachment; filename=grades-'+periodLabel.toLowerCase()+'.pdf');
+  doc.pipe(res);
+  const hdrs = ['Student','Class','Att','DS1','DS2','DS3','Exam','Raw','Final'];
+  const cols = [50,120,190,245,300,355,410,460,505];
+  const drawHeader = y => {
+    doc.rect(50,y-5,520,25).fill('#0b2a4a');
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
+    hdrs.forEach((h,i)=>doc.text(h,cols[i],y,{width:i===0?70:30,align:i===0?'left':'center'}));
+    doc.fillColor('black').rect(50,y+20,520,1).fill('#cccccc');
+  };
+  doc.fontSize(22).font('Helvetica-Bold').text('Semester Grades — '+periodLabel,{align:'center'});
+  doc.moveDown(0.5);
+  doc.fontSize(12).font('Helvetica').text(`Class: ${selectedClass==='all'?'All':selectedClass}  |  Year: ${selectedYear}`,{align:'center'});
+  doc.moveDown(0.3);
+  doc.fontSize(12).font('Helvetica').text(`Generated: ${new Date().toLocaleDateString()}`,{align:'center'});
+  doc.moveDown(0.5);
+  doc.text(`Total Students: ${students.length}`,{align:'center'});
+  doc.moveDown(1.5);
+  drawHeader(doc.y);
+  let y = doc.y + 30;
+  doc.fillColor('black').fontSize(8).font('Helvetica');
+  students.forEach((student,i) => {
+    if (y>750) { doc.addPage(); y=50; drawHeader(y); y+=30; doc.fillColor('black').fontSize(8).font('Helvetica'); }
+    const g = grades.find(gr=>gr.studentId.equals(student._id));
+    const att = g?g.attendance:0, ds1 = g?g.ds[0]||0:0, ds2 = g?g.ds[1]||0:0, ds3 = g?g.ds[2]||0:0, exam = g?g.bigExam:0, raw = g?g.rawTotal:0, fin = g?g.final60:0;
+    if (i%2===0) doc.rect(50,y-2,520,18).fill('#f8f9fa');
+    doc.fillColor('black');
+    const name = student.name.length>14?student.name.slice(0,12)+'..':student.name;
+    doc.text(name,cols[0],y);
+    doc.text(student.className.replace('Grade ',''),cols[1],y);
+    doc.text(att.toFixed(1),cols[2],y,{width:30,align:'center'});
+    doc.text(ds1.toFixed(1),cols[3],y,{width:30,align:'center'});
+    doc.text(ds2.toFixed(1),cols[4],y,{width:30,align:'center'});
+    doc.text(ds3.toFixed(1),cols[5],y,{width:30,align:'center'});
+    doc.text(exam.toFixed(1),cols[6],y,{width:30,align:'center'});
+    doc.font('Helvetica-Bold').fillColor('#1a2a3a').text(raw.toFixed(1),cols[7],y,{width:30,align:'center'});
+    doc.font('Helvetica').fillColor(fin>=30?'#27ae60':fin>=24?'#f39c12':'#e74c3c').text(fin.toFixed(1),cols[8],y,{width:30,align:'center'});
+    doc.fillColor('black').font('Helvetica');
     y += 22;
   });
   doc.moveDown(2);
@@ -374,7 +383,7 @@ app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
   const className = gradeSlugToClass(req.params.gradeSlug);
   const isGradeLanding = !req.params.gradeSlug;
   if (req.params.gradeSlug&&!className) return res.status(404).send('Class portal not found');
-  if (isGradeLanding) return res.render('student/portal',{announcements:[],exercises:[],classes:CLASSES,isGradeLanding,selectedClass:null,portalPath:'/portal',month:month||'',semester:semester||''});
+  if (isGradeLanding) return res.render('student/portal',{announcements:[],exercises:[],classes:CLASSES,isGradeLanding,selectedClass:null,portalPath:'/portal'});
   let [announcements, exercises] = await Promise.all([
     Announcement.find({className}).sort({createdAt:-1}),
     Exercise.find({className}).sort({createdAt:-1})
@@ -386,7 +395,7 @@ app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
     exercises = exercises.filter(e => {const d=new Date(e.createdAt); return d>=start&&d<end;});
   }
   if (semester&&!isNaN(semester)) { const sn=parseInt(semester); if(sn>=1&&sn<=4) exercises=exercises.filter(e=>e.semester===sn); }
-  res.render('student/portal',{announcements,exercises,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className),month:month||'',semester:semester||''});
+  res.render('student/portal',{announcements,exercises,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className)});
 }));
 
 // ============ START SERVER ============

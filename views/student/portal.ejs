@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .portal-item, .portal-section {
+      border-radius: 16px !important;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.06) !important;
+    }
+  </style>
 </head>
 <body>
   <div class="portal-container">
@@ -31,16 +37,6 @@
         </ul>
       </div>
     <% } else { %>
-      <div class="portal-filters">
-        <form method="GET" action="<%= portalPath %>" class="filter-form">
-          <label for="monthInput"><i class="fas fa-calendar"></i> Month:</label>
-          <input type="month" name="month" id="monthInput" value="<%= month||'' %>">
-          <label for="semesterInput"><i class="fas fa-book"></i> Semester:</label>
-          <input type="number" name="semester" id="semesterInput" placeholder="1-4" min="1" max="4" value="<%= semester||'' %>">
-          <button type="submit"><i class="fas fa-filter"></i> Filter</button>
-          <a href="<%= portalPath %>" class="clear-btn"><i class="fas fa-times"></i> Clear</a>
-        </form>
-      </div>
       <div class="portal-content">
         <div class="portal-section">
           <h2 style="color:#0b2a4a;border-bottom:3px solid #0b2a4a;padding-bottom:.5rem;margin-bottom:1.5rem"><i class="fas fa-bullhorn"></i> Announcements</h2>
