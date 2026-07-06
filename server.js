@@ -234,15 +234,20 @@ app.get('/teacher/grades', isAuth, h(async (req, res) => {
 app.post('/teacher/grades', isAuth, h(async (req, res) => {
   const {studentId,semester,attendance,bigExam} = req.body;
   const sn = parseInt(semester);
-  const ds = [];
-  for (let i = 1; i <= 3; i++) {
-    ds.push(parseScore(req.body['ds'+i], 10));
+  if (sn === 3 || sn === 6) {
+    const exam = parseScore(bigExam, 60);
+    await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:0,ds:[0,0,0],bigExam:exam,rawTotal:exam,final60:exam},{upsert:true,new:true});
+  } else {
+    const ds = [];
+    for (let i = 1; i <= 3; i++) {
+      ds.push(parseScore(req.body['ds'+i], 8));
+    }
+    const att = parseScore(attendance, 6);
+    const exam = parseScore(bigExam, 30);
+    const rawTotal = att + ds.reduce((a,b)=>a+b,0) + exam;
+    const final60 = rawTotal;
+    await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:att,ds,bigExam:exam,rawTotal,final60},{upsert:true,new:true});
   }
-  const att = parseScore(attendance, 6);
-  const exam = parseScore(bigExam, 20);
-  const rawTotal = att + ds.reduce((a,b)=>a+b,0) + exam;
-  const final60 = (rawTotal / 56) * 60;
-  await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:att,ds,bigExam:exam,rawTotal,final60},{upsert:true,new:true});
   res.redirect(req.headers.referer||'/teacher/grades');
 }));
 
@@ -333,13 +338,15 @@ app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
   res.setHeader('Content-Type','application/pdf');
   res.setHeader('Content-Disposition','attachment; filename=grades-'+periodLabel.toLowerCase()+'.pdf');
   doc.pipe(res);
-  const hdrs = ['Student','Class','Att','DS1','DS2','DS3','Exam','Raw','Final'];
-  const cols = [50,120,190,245,300,355,410,460,505];
+  const isSimple = sn === 3 || sn === 6;
+  const hdrs = isSimple ? ['Student','Class','Grade /60'] : ['Student','Class','Att','DS1','DS2','DS3','Exam','Raw','Final'];
+  const cols = isSimple ? [50,160,310] : [50,120,190,245,300,355,410,460,505];
   const drawHeader = y => {
-    doc.rect(50,y-5,520,25).fill('#0b2a4a');
+    const w = isSimple ? 250 : 520;
+    doc.rect(50,y-5,w,25).fill('#0b2a4a');
     doc.fillColor('white').fontSize(9).font('Helvetica-Bold');
-    hdrs.forEach((h,i)=>doc.text(h,cols[i],y,{width:i===0?70:30,align:i===0?'left':'center'}));
-    doc.fillColor('black').rect(50,y+20,520,1).fill('#cccccc');
+    hdrs.forEach((h,i)=>doc.text(h,cols[i],y,{width:i===0?110:(isSimple?100:30),align:i===0?'left':'center'}));
+    doc.fillColor('black').rect(50,y+20,w,1).fill('#cccccc');
   };
   doc.fontSize(22).font('Helvetica-Bold').text('Semester Grades — '+periodLabel,{align:'center'});
   doc.moveDown(0.5);
@@ -355,19 +362,24 @@ app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
   students.forEach((student,i) => {
     if (y>750) { doc.addPage(); y=50; drawHeader(y); y+=30; doc.fillColor('black').fontSize(8).font('Helvetica'); }
     const g = grades.find(gr=>gr.studentId.equals(student._id));
-    const att = g?g.attendance:0, ds1 = g?g.ds[0]||0:0, ds2 = g?g.ds[1]||0:0, ds3 = g?g.ds[2]||0:0, exam = g?g.bigExam:0, raw = g?g.rawTotal:0, fin = g?g.final60:0;
-    if (i%2===0) doc.rect(50,y-2,520,18).fill('#f8f9fa');
+    if (i%2===0) doc.rect(50,y-2,cols[cols.length-1]+30-50,18).fill('#f8f9fa');
     doc.fillColor('black');
     const name = student.name.length>14?student.name.slice(0,12)+'..':student.name;
     doc.text(name,cols[0],y);
     doc.text(student.className.replace('Grade ',''),cols[1],y);
-    doc.text(att.toFixed(1),cols[2],y,{width:30,align:'center'});
-    doc.text(ds1.toFixed(1),cols[3],y,{width:30,align:'center'});
-    doc.text(ds2.toFixed(1),cols[4],y,{width:30,align:'center'});
-    doc.text(ds3.toFixed(1),cols[5],y,{width:30,align:'center'});
-    doc.text(exam.toFixed(1),cols[6],y,{width:30,align:'center'});
-    doc.font('Helvetica-Bold').fillColor('#1a2a3a').text(raw.toFixed(1),cols[7],y,{width:30,align:'center'});
-    doc.font('Helvetica').fillColor(fin>=30?'#27ae60':fin>=24?'#f39c12':'#e74c3c').text(fin.toFixed(1),cols[8],y,{width:30,align:'center'});
+    if (isSimple) {
+      const fin = g?g.final60:0;
+      doc.font('Helvetica-Bold').fillColor(fin>=30?'#27ae60':fin>=24?'#f39c12':'#e74c3c').text(fin.toFixed(1),cols[2],y,{width:60,align:'center'});
+    } else {
+      const att = g?g.attendance:0, ds1 = g?g.ds[0]||0:0, ds2 = g?g.ds[1]||0:0, ds3 = g?g.ds[2]||0:0, exam = g?g.bigExam:0, raw = g?g.rawTotal:0, fin = g?g.final60:0;
+      doc.text(att.toFixed(1),cols[2],y,{width:30,align:'center'});
+      doc.text(ds1.toFixed(1),cols[3],y,{width:30,align:'center'});
+      doc.text(ds2.toFixed(1),cols[4],y,{width:30,align:'center'});
+      doc.text(ds3.toFixed(1),cols[5],y,{width:30,align:'center'});
+      doc.text(exam.toFixed(1),cols[6],y,{width:30,align:'center'});
+      doc.font('Helvetica-Bold').fillColor('#1a2a3a').text(raw.toFixed(1),cols[7],y,{width:30,align:'center'});
+      doc.font('Helvetica').fillColor(fin>=30?'#27ae60':fin>=24?'#f39c12':'#e74c3c').text(fin.toFixed(1),cols[8],y,{width:30,align:'center'});
+    }
     doc.fillColor('black').font('Helvetica');
     y += 22;
   });

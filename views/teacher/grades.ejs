@@ -7,7 +7,7 @@
   <div class="page-hero">
     <p class="eyebrow">Assessment Center</p>
     <h1><i class="fas fa-table"></i> Semester Grades</h1>
-    <p>Enter scores for each period. Attendance /6, DS /10 each, Big Exam /20. Final score is converted to /60.</p>
+    <p>Enter scores for each period. S1/S2/S3/S4 use attendance /6, DS /8 each, Big Exam /30. Mid-Year and Final-Year are one grade /60.</p>
   </div>
   <form method="GET" action="/teacher/grades" class="filter-section">
     <label for="cf"><i class="fas fa-filter"></i> Class:</label>
@@ -23,14 +23,19 @@
   </form>
   <section class="panel-card">
     <div class="section-heading"><h2><i class="fas fa-edit"></i> Grade Entry</h2><p>Select student and period, then enter scores.</p></div>
-    <form method="POST" action="/teacher/grades" class="grade-form">
+    <form method="POST" action="/teacher/grades" class="grade-form" id="gradeForm">
       <select name="studentId" required><option value="">Select Student</option><% students.forEach(s=>{%><option value="<%=s._id%>"><%=s.name%> (<%=s.className%> - <%=s.academicYear||'Not set'%>)</option><%})%></select>
-      <select name="semester" required><option value="">Period</option><% periods.forEach(p=>{%><option value="<%=p%>"><%=periodLabels[p]%></option><%})%></select>
-      <input type="number" name="attendance" placeholder="Attendance /6" min="0" max="6" step="0.5" required>
-      <input type="number" name="ds1" placeholder="DS1 /10" min="0" max="10" step="0.5" required>
-      <input type="number" name="ds2" placeholder="DS2 /10" min="0" max="10" step="0.5" required>
-      <input type="number" name="ds3" placeholder="DS3 /10" min="0" max="10" step="0.5" required>
-      <input type="number" name="bigExam" placeholder="Big Exam /20" min="0" max="20" step="0.5" required>
+      <select name="semester" id="entryPeriod" required onchange="toggleGradeFields()"><option value="">Period</option><% periods.forEach(p=>{%><option value="<%=p%>"><%=periodLabels[p]%></option><%})%></select>
+      <div id="regularFields">
+        <input type="number" name="attendance" placeholder="Attendance /6" min="0" max="6" step="0.5" required>
+        <input type="number" name="ds1" placeholder="DS1 /8" min="0" max="8" step="0.5" required>
+        <input type="number" name="ds2" placeholder="DS2 /8" min="0" max="8" step="0.5" required>
+        <input type="number" name="ds3" placeholder="DS3 /8" min="0" max="8" step="0.5" required>
+        <input type="number" name="bigExam" placeholder="Big Exam /30" min="0" max="30" step="0.5" required>
+      </div>
+      <div id="simpleField" style="display:none">
+        <input type="number" name="bigExam" id="simpleExam" placeholder="Grade /60" min="0" max="60" step="0.5" required>
+      </div>
       <button type="submit"><i class="fas fa-save"></i> Save Grade</button>
     </form>
   </section>
@@ -38,11 +43,26 @@
     <div class="section-heading"><h2><i class="fas fa-table"></i> Grades — <%= periodLabels[parseInt(selectedSemester)]||'All Periods' %></h2><p><%= grades.length %> grade<%= grades.length===1?'':'s' %> recorded.</p></div>
     <div class="table-responsive">
       <table>
+        <% const sn = parseInt(selectedSemester); if (!isNaN(sn) && (sn===3||sn===6)) { %>
+        <thead>
+          <tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Grade /60</th></tr>
+        </thead>
+        <tbody>
+          <% grades.forEach(g=>{const s=students.find(s=>s._id.toString()===g.studentId.toString());if(!s)return;%>
+            <tr>
+              <td><%=s.name%></td><td><span class="class-badge"><%=s.className%></span></td><td><%=s.academicYear||'Not set'%></td>
+              <td><%=periodLabels[g.semester]||'S'+g.semester%></td>
+              <td><strong class="final-grade"><%=g.final60.toFixed(1)%></strong></td>
+            </tr>
+          <%})%>
+          <% if (grades.length===0) { %><tr><td colspan="5" class="text-center">No grades saved for this period.</td></tr><% } %>
+        </tbody>
+        <% } else { %>
         <thead>
           <tr>
             <th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Att /6</th>
-            <th>DS1 /10</th><th>DS2 /10</th><th>DS3 /10</th>
-            <th>Exam /20</th><th>Raw</th><th>Final /60</th>
+            <th>DS1 /8</th><th>DS2 /8</th><th>DS3 /8</th>
+            <th>Exam /30</th><th>Raw</th><th>Final /60</th>
           </tr>
         </thead>
         <tbody>
@@ -57,10 +77,30 @@
           <%})%>
           <% if (grades.length===0) { %><tr><td colspan="11" class="text-center">No grades saved for this period.</td></tr><% } %>
         </tbody>
+        <% } %>
       </table>
     </div>
   </section>
 </div>
-<script>function exportGradesPDF(){const p=new URLSearchParams({class:document.getElementById('cf').value,year:document.getElementById('yf').value,semester:document.getElementById('pf').value});window.location.href='/teacher/export-semester-pdf?'+p.toString()}</script>
+<script>
+function toggleGradeFields() {
+  var v = parseInt(document.getElementById('entryPeriod').value);
+  var regular = document.getElementById('regularFields');
+  var simple = document.getElementById('simpleField');
+  if (v === 3 || v === 6) {
+    regular.style.display = 'none';
+    simple.style.display = 'flex';
+    regular.querySelectorAll('input').forEach(function(el){ el.required = false; });
+    simple.querySelector('input').required = true;
+  } else {
+    regular.style.display = 'flex';
+    simple.style.display = 'none';
+    regular.querySelectorAll('input').forEach(function(el){ el.required = true; });
+    simple.querySelector('input').required = false;
+  }
+  if (!v) { regular.style.display = 'flex'; simple.style.display = 'none'; }
+}
+function exportGradesPDF(){const p=new URLSearchParams({class:document.getElementById('cf').value,year:document.getElementById('yf').value,semester:document.getElementById('pf').value});window.location.href='/teacher/export-semester-pdf?'+p.toString()}
+</script>
 </body>
 </html>
