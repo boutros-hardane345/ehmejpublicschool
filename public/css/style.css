@@ -15,23 +15,28 @@ h1,h2,h3,h4,h5,h6{font-family:'Georgia','Palatino',serif;font-weight:700;letter-
 .login-container button{width:100%;padding:14px;background:linear-gradient(135deg,#1a2a3a,#2a4a6a);color:#fff;border:none;border-radius:12px;font-size:1rem;cursor:pointer;font-weight:700;margin-top:.5rem;transition:.3s}
 .login-container button:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(26,42,58,.3)}
 .alert.error{background:linear-gradient(135deg,#fff0f0,#ffe0e0);color:#c0392b;padding:12px;border-radius:10px;margin-bottom:1rem;text-align:center;font-weight:600;border:1px solid #fcc}
-.main-header{background:rgba(26,42,58,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#f0eae3;border-bottom:3px solid #b8944e;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.1)}
-.header-row{display:flex;justify-content:space-between;align-items:center;padding:.75rem 2rem}
-.main-header .logo{font-size:1.15rem;font-weight:700;font-family:'Georgia',serif;letter-spacing:.02em;color:#f0e6d3;animation:float 3s ease-in-out infinite;display:flex;align-items:center;gap:.55rem}
-.hamburger{display:none;background:none;border:none;color:#f0eae3;font-size:1.4rem;cursor:pointer;padding:4px 8px;transition:.3s}
-.hamburger:hover{color:#fff;transform:scale(1.1)}
-.main-header nav{display:flex;gap:.15rem;align-items:center;padding:0 2rem .6rem;justify-content:flex-end}
-.main-header nav a{color:#aab2be;text-decoration:none;padding:.5rem .85rem;border-radius:8px;font-size:.85rem;font-weight:500;transition:all .25s ease;white-space:nowrap;position:relative;display:inline-flex;align-items:center;gap:.45rem;letter-spacing:.01em}
-.main-header nav a i{font-size:.82rem;opacity:.7;transition:opacity .25s}
-.main-header nav a::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%) scaleX(0);width:calc(100% - 1.7rem);height:2px;background:#b8944e;border-radius:2px;transition:transform .25s ease}
-.main-header nav a:hover{color:#fff;background:rgba(255,255,255,.07);transform:translateY(-1px)}
+.main-header{background:rgba(15,31,45,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#f0eae3;border-bottom:1px solid rgba(184,148,78,.5);position:sticky;top:0;z-index:100;box-shadow:0 8px 24px rgba(11,29,43,.16)}
+.header-shell{width:min(1280px,100%);min-height:72px;margin:0 auto;padding:.7rem 2rem;display:flex;align-items:center;gap:1.25rem}
+.brand{display:inline-flex;align-items:center;gap:.7rem;color:#f7f1e8;text-decoration:none;min-width:max-content}
+.brand-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;color:#172b3d;background:linear-gradient(135deg,#d5b66f,#f3dfaa);box-shadow:0 5px 14px rgba(0,0,0,.2);font-size:1rem}
+.brand-copy{display:grid;gap:.1rem;font-family:'Georgia','Palatino',serif;line-height:1.1}
+.brand-copy strong{font-size:1rem;letter-spacing:.01em}
+.brand-copy small{font-family:'Inter','Segoe UI',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#cfbd93}
+.hamburger{display:none;width:40px;height:40px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#f0eae3;font-size:1rem;cursor:pointer;transition:.25s}
+.hamburger:hover{background:rgba(255,255,255,.14);color:#fff;transform:translateY(-1px)}
+.main-header nav{display:flex;gap:.2rem;align-items:center;margin-left:auto}
+.main-header nav a{color:#b9c4ce;text-decoration:none;padding:.6rem .72rem;border-radius:10px;font-size:.84rem;font-weight:650;transition:all .2s ease;white-space:nowrap;position:relative;display:inline-flex;align-items:center;gap:.45rem;letter-spacing:.01em}
+.main-header nav a i{width:1rem;text-align:center;font-size:.82rem;opacity:.75;transition:opacity .2s}
+.main-header nav a::after{content:'';position:absolute;right:.72rem;bottom:.28rem;left:.72rem;height:2px;background:#e3c77f;border-radius:999px;transform:scaleX(0);transition:transform .2s}
+.main-header nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
 .main-header nav a:hover i{opacity:1}
-.main-header nav a:hover::after{transform:translateX(-50%) scaleX(1)}
-.main-header nav a.active{color:#fff;background:rgba(255,255,255,.1)}
-.main-header nav a.active::after{transform:translateX(-50%) scaleX(1)}
-.main-header nav a.active i{opacity:1}
-.logout{color:#f5a098!important;font-weight:700!important;background:rgba(245,160,152,.08)!important;border:1px solid rgba(245,160,152,.15)!important}
-.logout:hover{background:rgba(245,160,152,.18)!important;border-color:rgba(245,160,152,.3)!important}
+.main-header nav a:hover::after{transform:scaleX(1)}
+.main-header nav a.active{color:#fff;background:linear-gradient(135deg,rgba(213,182,111,.23),rgba(255,255,255,.09));box-shadow:inset 0 0 0 1px rgba(227,199,127,.18)}
+.main-header nav a.active::after{transform:scaleX(1)}
+.main-header nav a.active i{color:#e3c77f;opacity:1}
+.main-header nav .logout{margin-left:.45rem;color:#ffc0b9!important;font-weight:700!important;background:rgba(245,160,152,.08)!important;border:1px solid rgba(245,160,152,.2)!important}
+.main-header nav .logout::after{display:none}
+.main-header nav .logout:hover{background:rgba(245,160,152,.18)!important;border-color:rgba(245,160,152,.38)!important}
 .container{width:min(1200px,100%);margin:2rem auto;padding:0 1.5rem;animation:fadeUp .5s ease}
 h1,h2{color:#1a2a3a;line-height:1.25}
 h2{margin-top:1.5rem;font-size:1.35rem;font-family:'Georgia',serif}
@@ -229,11 +234,16 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .portal-quote{padding:.6rem .85rem!important}
   .portal-quote .quote-banner-text{font-size:.88rem}
   .split-layout,.stats-grid{grid-template-columns:1fr}
-  .hamburger{display:block}
-  .main-header nav{display:flex;flex-direction:column;padding:0 1rem;gap:.35rem;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease}
-  .main-header nav.open{max-height:400px;padding:0 1rem 1rem}
-  .main-header nav a{width:100%;padding:.6rem .8rem;border-radius:10px;font-size:.95rem;text-align:center}
-  .main-header nav a::after{display:none}
+   .header-shell{min-height:64px;padding:.7rem 1rem;gap:.75rem;flex-wrap:wrap}
+   .brand-copy strong{font-size:.92rem}
+   .brand-copy small{font-size:.6rem}
+   .brand-mark{width:35px;height:35px;border-radius:10px}
+   .hamburger{display:block;margin-left:auto}
+   .main-header nav{order:3;display:flex;flex-basis:100%;flex-direction:column;align-items:stretch;margin-left:0;gap:.3rem;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease}
+   .main-header nav.open{max-height:400px;padding-top:.45rem}
+   .main-header nav a{width:100%;padding:.7rem .85rem;border-radius:10px;font-size:.92rem;text-align:left}
+   .main-header nav .logout{margin:.25rem 0 0!important}
+   .main-header nav a::after{display:none}
   form,.filter-form,.portal-class-tabs{flex-direction:column;align-items:stretch}
   form input,form select,form textarea{width:100%}
   table{font-size:.85rem;min-width:680px}
@@ -243,8 +253,7 @@ button:hover,.button-link:hover,.portal-item .download-btn:hover,.quick-links a:
   .filter-section select{width:100%}
   .quote-banner,.login-quote{width:calc(100% - 1.8rem)}
   .page-hero,.panel-card,.stat-card{padding:1.1rem}
-  .header-row{padding:.75rem 1rem}
-  download-btn{width:100%;text-align:center}
+   download-btn{width:100%;text-align:center}
   .question-form-row input,.question-form-row select{font-size:.82rem}
 }
 @media(max-width:640px){
