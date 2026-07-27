@@ -14,6 +14,11 @@ const Student = require('./models/Student');
 const Announcement = require('./models/Announcement');
 const Exercise = require('./models/Exercise');
 const Grade = require('./models/Grade');
+const Attendance = require('./models/Attendance');
+const Lesson = require('./models/Lesson');
+const SeatingChart = require('./models/SeatingChart');
+const Schedule = require('./models/Schedule');
+const Todo = require('./models/Todo');
 
 const CLASSES = ['Grade 7', 'Grade 8', 'Grade 9'];
 const MATH_QUOTES = [
@@ -421,6 +426,241 @@ app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
   }
   if (semester&&!isNaN(semester)) { const sn=parseInt(semester); if(sn>=1&&sn<=4) exercises=exercises.filter(e=>e.semester===sn); }
   res.render('student/portal',{announcements,exercises,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className)});
+}));
+
+// ============ SCHOOL TOOLS API ============
+
+app.get('/api/classes', (req, res) => res.json(CLASSES));
+app.get('/api/period-labels', (req, res) => res.json({1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'}));
+app.get('/api/periods', (req, res) => res.json([1,2,3,4,5,6]));
+
+// Students API
+app.get('/api/students', h(async (req, res) => {
+  const { className, academicYear } = req.query;
+  const students = await Student.find(getStudentFilter({ className, academicYear })).sort({ academicYear: -1, className: 1, name: 1 });
+  const academicYears = await getAcademicYears(academicYear || getCurrentAcademicYear());
+  res.json({ students, classes: CLASSES, academicYears, CLASSES });
+}));
+
+app.post('/api/students', h(async (req, res) => {
+  const { name, className, academicYear } = req.body;
+  const s = await Student.create({ name, className, academicYear: academicYear || getCurrentAcademicYear() });
+  res.json(s);
+}));
+
+app.delete('/api/students/:id', h(async (req, res) => {
+  await Student.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+app.delete('/api/students', h(async (req, res) => {
+  await Student.deleteMany({});
+  res.json({ success: true });
+}));
+
+// Content API (Announcements + Exercises)
+app.get('/api/content', h(async (req, res) => {
+  const { className, semester } = req.query;
+  const af = {}, ef = {};
+  if (className && className !== 'all') { af.className = className; ef.className = className; }
+  const sn = parseInt(semester, 10);
+  if (!isNaN(sn) && sn >= 1 && sn <= 4) ef.semester = sn;
+  const [announcements, exercises] = await Promise.all([
+    Announcement.find(af).sort({ createdAt: -1 }),
+    Exercise.find(ef).sort({ createdAt: -1 })
+  ]);
+  res.json({ announcements, exercises, CLASSES });
+}));
+
+app.post('/api/announcements', h(async (req, res) => {
+  const a = await Announcement.create(req.body);
+  res.json(a);
+}));
+
+app.delete('/api/announcements/:id', h(async (req, res) => {
+  await Announcement.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+app.post('/api/exercises', h(async (req, res) => {
+  const e = await Exercise.create(req.body);
+  res.json(e);
+}));
+
+app.delete('/api/exercises/:id', h(async (req, res) => {
+  await Exercise.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+// Grades API
+app.get('/api/grades', h(async (req, res) => {
+  const { className, academicYear, semester } = req.query;
+  const students = await Student.find(getStudentFilter({ className, academicYear })).sort({ name: 1 });
+  const studentIds = students.map(s => s._id);
+  let grades = await Grade.find({ studentId: { $in: studentIds } });
+  const sn = parseInt(semester, 10);
+  if (!isNaN(sn) && [1, 2, 3, 4, 5, 6].includes(sn)) grades = grades.filter(g => g.semester === sn);
+  const academicYears = await getAcademicYears(academicYear || getCurrentAcademicYear());
+  res.json({ students, grades, classes: CLASSES, academicYears, periods: [1, 2, 3, 4, 5, 6], periodLabels: { 1: 'S1', 2: 'S2', 3: 'Mid-Year', 4: 'S3', 5: 'S4', 6: 'Final-Year' }, CLASSES });
+}));
+
+app.post('/api/grades', h(async (req, res) => {
+  const { studentId, semester, attendance, bigExam, ds1, ds2, ds3 } = req.body;
+  const sn = parseInt(semester);
+  if (sn === 3 || sn === 6) {
+    const exam = parseScore(bigExam, 60);
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: exam, rawTotal: exam, final60: exam }, { upsert: true, new: true });
+  } else {
+    const ds = [];
+    for (let i = 1; i <= 3; i++) {
+      const dsRaw = parseScore(req.body['ds' + i], 10);
+      ds.push((dsRaw / 10) * 8);
+    }
+    const attRaw = parseScore(attendance, 10);
+    const att = (attRaw / 10) * 6;
+    const examRaw = parseScore(bigExam, 20);
+    const exam = (examRaw / 20) * 30;
+    const rawTotal = att + ds.reduce((a, b) => a + b, 0) + exam;
+    const final60 = rawTotal;
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: att, ds, bigExam: exam, rawTotal, final60 }, { upsert: true, new: true });
+  }
+  res.json({ success: true });
+}));
+
+app.get('/api/academic-year', (req, res) => res.json({ year: getCurrentAcademicYear() }));
+app.get('/api/quote', (req, res) => res.json(getDailyMathQuote()));
+
+// Attendance
+app.post('/api/attendance', h(async (req, res) => {
+  const { date, className, records } = req.body;
+  let att = await Attendance.findOne({ date, className });
+  if (att) { att.records = records; await att.save(); }
+  else att = await Attendance.create({ date, className, records });
+  res.json(att);
+}));
+
+app.get('/api/attendance', h(async (req, res) => {
+  const { date, className } = req.query;
+  const filter = {};
+  if (date) filter.date = date;
+  if (className) filter.className = className;
+  res.json(await Attendance.find(filter).sort({ date: -1 }));
+}));
+
+app.get('/api/attendance/stats', h(async (req, res) => {
+  const { className } = req.query;
+  const filter = {};
+  if (className) filter.className = className;
+  const all = await Attendance.find(filter).sort({ date: -1 }).limit(30);
+  let totalPresent = 0, totalAbsent = 0, totalStudents = 0;
+  const dayStats = all.map(a => {
+    const p = a.records.filter(r => r.status === 'present').length;
+    const ab = a.records.filter(r => r.status === 'absent').length;
+    totalPresent += p; totalAbsent += ab; totalStudents += a.records.length;
+    return { date: a.date, className: a.className, present: p, absent: ab, total: a.records.length, rate: a.records.length ? Math.round(p / a.records.length * 100) : 0 };
+  });
+  res.json({ dayStats, overall: { totalPresent, totalAbsent, totalStudents, rate: totalStudents ? Math.round(totalPresent / totalStudents * 100) : 0 } });
+}));
+
+// Lessons
+app.get('/api/lessons', h(async (req, res) => {
+  const { className, date } = req.query;
+  const filter = {};
+  if (className) filter.className = className;
+  if (date) filter.date = date;
+  res.json(await Lesson.find(filter).sort({ date: -1, createdAt: -1 }));
+}));
+
+app.post('/api/lessons', h(async (req, res) => {
+  res.json(await Lesson.create(req.body));
+}));
+
+app.put('/api/lessons/:id', h(async (req, res) => {
+  res.json(await Lesson.findByIdAndUpdate(req.params.id, req.body, { new: true }));
+}));
+
+app.delete('/api/lessons/:id', h(async (req, res) => {
+  await Lesson.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+// Seating Chart
+app.get('/api/seating/:className', h(async (req, res) => {
+  const chart = await SeatingChart.findOne({ className: req.params.className });
+  res.json(chart || { className: req.params.className, rows: 4, cols: 5, desks: [] });
+}));
+
+app.post('/api/seating', h(async (req, res) => {
+  const { className, rows, cols, desks } = req.body;
+  let chart = await SeatingChart.findOne({ className });
+  if (chart) { chart.rows = rows; chart.cols = cols; chart.desks = desks; await chart.save(); }
+  else chart = await SeatingChart.create({ className, rows, cols, desks });
+  res.json(chart);
+}));
+
+// Schedule
+app.get('/api/schedule', h(async (req, res) => {
+  const { className } = req.query;
+  const filter = {};
+  if (className) filter.className = className;
+  res.json(await Schedule.find(filter).sort({ day: 1, period: 1 }));
+}));
+
+app.post('/api/schedule', h(async (req, res) => {
+  res.json(await Schedule.create(req.body));
+}));
+
+app.put('/api/schedule/:id', h(async (req, res) => {
+  res.json(await Schedule.findByIdAndUpdate(req.params.id, req.body, { new: true }));
+}));
+
+app.delete('/api/schedule/:id', h(async (req, res) => {
+  await Schedule.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+// Todos
+app.get('/api/todos', h(async (req, res) => {
+  res.json(await Todo.find().sort({ createdAt: -1 }));
+}));
+
+app.post('/api/todos', h(async (req, res) => {
+  res.json(await Todo.create(req.body));
+}));
+
+app.put('/api/todos/:id', h(async (req, res) => {
+  res.json(await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true }));
+}));
+
+app.delete('/api/todos/:id', h(async (req, res) => {
+  await Todo.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+// Analytics
+app.get('/api/analytics', h(async (req, res) => {
+  const attendanceStats = await Attendance.aggregate([
+    { $unwind: '$records' },
+    { $group: { _id: '$records.status', count: { $sum: 1 } } }
+  ]);
+  const present = attendanceStats.find(a => a._id === 'present')?.count || 0;
+  const absent = attendanceStats.find(a => a._id === 'absent')?.count || 0;
+  const totalAttendance = present + absent;
+  const lessonCount = await Lesson.countDocuments();
+  const todoStats = await Todo.aggregate([{ $group: { _id: '$completed', count: { $sum: 1 } } }]);
+  const todosDone = todoStats.find(t => t._id === true)?.count || 0;
+  const todosTotal = todoStats.reduce((s, t) => s + t.count, 0);
+  const classAttendance = await Attendance.aggregate([
+    { $unwind: '$records' },
+    { $group: { _id: { className: '$className', status: '$records.status' }, count: { $sum: 1 } } }
+  ]);
+  const classBreakdown = CLASSES.map(c => {
+    const p = classAttendance.find(a => a._id.className === c && a._id.status === 'present')?.count || 0;
+    const a = classAttendance.find(a => a._id.className === c && a._id.status === 'absent')?.count || 0;
+    return { className: c, present: p, absent: a, total: p + a, rate: (p + a) ? Math.round(p / (p + a) * 100) : 0 };
+  });
+  const recentAttendance = await Attendance.find().sort({ date: -1 }).limit(7);
+  res.json({ present, absent, totalAttendance, attendanceRate: totalAttendance ? Math.round(present / totalAttendance * 100) : 0, lessonCount, todosDone, todosTotal, classBreakdown, recentAttendance });
 }));
 
 // ============ START SERVER ============

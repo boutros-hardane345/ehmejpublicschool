@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grades - École Officielle Ehmej</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .grade-input{width:55px;padding:4px 6px;border:2px solid #e0e6ed;border-radius:6px;text-align:center;font-weight:700;font-size:.82rem;transition:.2s}
+    .grade-input:focus{outline:none;border-color:#b8944e;box-shadow:0 0 0 3px rgba(184,148,78,.12)}
+    .grade-final{font-weight:800;font-size:.95rem}
+    .grade-pass{color:#27ae60}
+    .grade-fail{color:#e74c3c}
+    .grade-border{color:#f39c12}
+  </style>
+</head>
+<body class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/">
+      <span class="brand-mark"><i class="fas fa-school"></i></span>
+      <div><strong>École Officielle Ehmej</strong><small>School Tools</small></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-group"><div class="sidebar-group-label">School Tools</div></div>
+      <a href="/"><i class="fas fa-chart-pie"></i> Dashboard</a>
+      <a href="/attendance.html"><i class="fas fa-clipboard-check"></i> Attendance</a>
+      <a href="/lesson-planner.html"><i class="fas fa-book-open"></i> Lesson Planner</a>
+      <a href="/seating-chart.html"><i class="fas fa-chair"></i> Seating Chart</a>
+      <a href="/schedule.html"><i class="fas fa-calendar-alt"></i> Schedule</a>
+      <a href="/productivity.html"><i class="fas fa-tools"></i> Productivity</a>
+      <div class="sidebar-group" style="margin-top:.5rem"><div class="sidebar-group-label">Teacher Tools</div></div>
+      <a href="/students.html"><i class="fas fa-users"></i> Students</a>
+      <a href="/content.html"><i class="fas fa-layer-group"></i> Content</a>
+      <a href="/grades.html"><i class="fas fa-star"></i> Grades</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sidebarQuote" style="font-size:.68rem;font-style:italic;color:#b9c4ce;margin-bottom:.5rem;line-height:1.3"></div>
+      <a href="/portal" style="color:#cfbd93;text-decoration:none;font-size:.68rem;display:block;margin-bottom:.35rem"><i class="fas fa-external-link-alt"></i> Student Portals</a>
+      &copy; 2026 École Officielle Ehmej
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+  <div class="main-content">
+    <div class="container">
+      <div class="page-hero">
+        <p class="eyebrow">Grade Management</p>
+        <h1><i class="fas fa-star"></i> Grades</h1>
+        <p>Enter and manage student grades per semester.</p>
+      </div>
+
+      <div class="filter-bar">
+        <label for="gClass">Class:</label>
+        <select id="gClass"><option value="all">All Classes</option><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select>
+        <label for="gYear">Year:</label>
+        <select id="gYear"></select>
+        <label for="gSemester">Period:</label>
+        <select id="gSemester"><option value="1">S1</option><option value="2">S2</option><option value="3">Mid-Year</option><option value="4">S3</option><option value="5">S4</option><option value="6">Final-Year</option></select>
+        <button class="btn btn-primary" onclick="loadGrades()"><i class="fas fa-sync"></i> Load</button>
+      </div>
+
+      <div class="panel-card">
+        <div class="section-heading">
+          <h2><i class="fas fa-edit"></i> Grade Entry</h2>
+          <p id="gradeContext">Select filters and load to enter grades.</p>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead id="gradeHead"></thead>
+            <tbody id="gradeBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="gradeEmpty" style="display:none">
+          <i class="fas fa-star"></i>
+          <p>No students found for the selected filters.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/grades.js"></script>
+</body>
+</html>

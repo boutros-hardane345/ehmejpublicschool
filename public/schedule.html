@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schedule - École Officielle Ehmej</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .timetable{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.05)}
+    .timetable th,.timetable td{text-align:center;padding:8px 6px;font-size:.82rem;vertical-align:top;min-height:70px;height:70px;width:14%}
+    .timetable th{background:linear-gradient(135deg,#1a2a3a,#2a4a6a);color:#f0eae3;font-weight:600;padding:10px 6px}
+    .timetable th:first-child{width:8%}
+    .timetable td{border:1px solid #f0ece6;cursor:pointer;transition:.2s;position:relative}
+    .timetable td:hover{background:#fcf9f5}
+    .timetable .period-label{font-weight:700;color:#1a2a3a;background:#f5f0eb;cursor:default}
+    .schedule-entry{background:linear-gradient(135deg,#e8f0fe,#dce6f5);border-radius:6px;padding:5px 4px;font-size:.72rem;font-weight:600;color:#0b2a4a;margin:2px 0}
+    .schedule-entry .sub{font-size:.7rem;font-weight:400;color:#555;display:block}
+  </style>
+</head>
+<body class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="/">
+      <span class="brand-mark"><i class="fas fa-school"></i></span>
+      <div><strong>École Officielle Ehmej</strong><small>School Tools</small></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="sidebar-group"><div class="sidebar-group-label">School Tools</div></div>
+      <a href="/"><i class="fas fa-chart-pie"></i> Dashboard</a>
+      <a href="/attendance.html"><i class="fas fa-clipboard-check"></i> Attendance</a>
+      <a href="/lesson-planner.html"><i class="fas fa-book-open"></i> Lesson Planner</a>
+      <a href="/seating-chart.html"><i class="fas fa-chair"></i> Seating Chart</a>
+      <a href="/schedule.html"><i class="fas fa-calendar-alt"></i> Schedule</a>
+      <a href="/productivity.html"><i class="fas fa-tools"></i> Productivity</a>
+      <div class="sidebar-group" style="margin-top:.5rem"><div class="sidebar-group-label">Teacher Tools</div></div>
+      <a href="/students.html"><i class="fas fa-users"></i> Students</a>
+      <a href="/content.html"><i class="fas fa-layer-group"></i> Content</a>
+      <a href="/grades.html"><i class="fas fa-star"></i> Grades</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sidebarQuote" style="font-size:.68rem;font-style:italic;color:#b9c4ce;margin-bottom:.5rem;line-height:1.3"></div>
+      <a href="/portal" style="color:#cfbd93;text-decoration:none;font-size:.68rem;display:block;margin-bottom:.35rem"><i class="fas fa-external-link-alt"></i> Student Portals</a>
+      &copy; 2026 École Officielle Ehmej
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+  <div class="main-content">
+    <div class="container">
+      <div class="page-hero">
+        <p class="eyebrow">Weekly Timetable</p>
+        <h1><i class="fas fa-calendar-alt"></i> Instructor Schedule</h1>
+        <p>Manage your weekly class schedule.</p>
+      </div>
+
+      <div class="filter-bar">
+        <label for="schClass">Class:</label>
+        <select id="schClass"><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select>
+        <button class="btn btn-primary" onclick="loadSchedule()"><i class="fas fa-sync"></i> Load</button>
+        <button class="btn btn-success" onclick="showAddEntry()"><i class="fas fa-plus"></i> Add Entry</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="timetable">
+          <thead><tr><th>Period</th><th>Monday</th><th>Tuesday</th><th>Wednesday</th><th>Thursday</th><th>Friday</th></tr></thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="entryModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center" onclick="if(event.target===this)hideEntryModal()">
+    <div style="background:#fff;border-radius:16px;padding:2rem;width:min(400px,90%)">
+      <h3 style="margin-bottom:1rem" id="entryModalTitle">Add Entry</h3>
+      <input type="hidden" id="entryId">
+      <div style="display:grid;gap:.8rem">
+        <select id="entryDay" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
+          <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+        </select>
+        <select id="entryPeriod" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
+          <option value="1">Period 1</option><option value="2">Period 2</option>
+          <option value="3">Period 3</option><option value="4">Period 4</option>
+          <option value="5">Period 5</option><option value="6">Period 6</option>
+        </select>
+        <input type="text" id="entrySubject" placeholder="Subject (e.g. Math)" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
+        <input type="text" id="entryTeacher" placeholder="Teacher name" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
+        <input type="text" id="entryRoom" placeholder="Room (e.g. 201)" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
+        <div style="display:flex;gap:.5rem;margin-top:.5rem">
+          <button class="btn btn-success" onclick="saveEntry()"><i class="fas fa-save"></i> Save</button>
+          <button class="btn btn-outline" onclick="hideEntryModal()">Cancel</button>
+          <button class="btn btn-danger" id="deleteEntryBtn" style="display:none;margin-left:auto" onclick="deleteEntry()"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/schedule.js"></script>
+</body>
+</html>
