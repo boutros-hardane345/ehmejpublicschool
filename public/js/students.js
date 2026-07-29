@@ -37,10 +37,12 @@ function renderStudents() {
 async function addStudent() {
   const name = document.getElementById('sName').value.trim();
   const className = document.getElementById('sNewClass').value;
+  const academicYear = document.getElementById('sYearInput').value.trim();
   if (!name) { showToast('Enter a student name', true); return; }
   try {
-    await API.post('/api/students', { name, className });
+    await API.post('/api/students', { name, className, academicYear });
     document.getElementById('sName').value = '';
+    document.getElementById('sYearInput').value = '';
     showToast('Student added!');
     loadStudents();
   } catch (e) {
@@ -71,5 +73,8 @@ async function deleteAllStudents() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const d = new Date();
+  const y = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  document.getElementById('sYearInput').value = `${y}-${y + 1}`;
   loadStudents();
 });

@@ -107,15 +107,18 @@ function hideExModal() {
 }
 
 async function saveExercise() {
-  const data = {
-    className: document.getElementById('exClass').value,
-    title: document.getElementById('exTitle').value.trim(),
-    description: document.getElementById('exDesc').value.trim(),
-    semester: parseInt(document.getElementById('exSemester').value)
-  };
-  if (!data.title) { showToast('Enter a title', true); return; }
+  const title = document.getElementById('exTitle').value.trim();
+  if (!title) { showToast('Enter a title', true); return; }
   try {
-    await API.post('/api/exercises', data);
+    const fd = new FormData();
+    fd.append('className', document.getElementById('exClass').value);
+    fd.append('title', title);
+    fd.append('description', document.getElementById('exDesc').value.trim());
+    fd.append('semester', document.getElementById('exSemester').value);
+    const fileInput = document.getElementById('exFile');
+    if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
+    const r = await fetch('/api/exercises', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error(await r.text());
     showToast('Exercise posted!');
     hideExModal();
     loadContent();

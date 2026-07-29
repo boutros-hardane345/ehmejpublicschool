@@ -482,8 +482,13 @@ app.delete('/api/announcements/:id', h(async (req, res) => {
   res.json({ success: true });
 }));
 
-app.post('/api/exercises', h(async (req, res) => {
-  const e = await Exercise.create(req.body);
+app.post('/api/exercises', upload.single('file'), h(async (req, res) => {
+  const body = { ...req.body };
+  if (req.file) {
+    body.fileUrl = '/uploads/' + req.file.filename;
+    body.fileType = req.file.mimetype;
+  }
+  const e = await Exercise.create(body);
   res.json(e);
 }));
 
