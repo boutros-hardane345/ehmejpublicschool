@@ -18,6 +18,15 @@
     .cat-personal{background:#fde8d5;color:#8a5a2a}
     .todo-checkbox{width:18px;height:18px;cursor:pointer;accent-color:#27ae60}
     .completed-text{text-decoration:line-through;color:#b9c4ce}
+    .picker-result{font-size:2.8rem;font-weight:800;text-align:center;padding:1.5rem 0;font-family:'Georgia',serif;transition:.3s;min-height:5rem}
+    .picker-result.highlight{animation:pop .4s ease;background:linear-gradient(135deg,#1a2a3a,#b8944e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .group-card{background:linear-gradient(135deg,#fcfaf8,#fff);border:1px solid #ece4d9;border-radius:12px;padding:.9rem 1rem;margin-bottom:.7rem;transition:.3s}
+    .group-card:hover{box-shadow:0 4px 15px rgba(0,0,0,.05);border-color:#b8944e}
+    .group-card h4{color:#0b2a4a;margin-bottom:.4rem;font-size:1rem}
+    .group-card .student-chip{display:inline-block;padding:3px 12px;margin:3px 4px;background:#f5f0eb;border-radius:20px;font-size:.82rem;color:#1a2a3a;font-weight:600}
+    .picker-name{display:inline-block;padding:6px 16px;margin:4px;background:#f5f0eb;border-radius:20px;font-size:.85rem;color:#1a2a3a;font-weight:600;cursor:pointer;transition:.2s}
+    .picker-name:hover{background:#e8ddd0}
+    .picker-name.excluded{opacity:.4;text-decoration:line-through}
   </style>
 </head>
 <body class="sidebar-layout">
@@ -84,6 +93,39 @@
             <button class="btn btn-warning" id="timerPauseBtn" onclick="pauseTimer()" style="display:none"><i class="fas fa-pause"></i> Pause</button>
             <button class="btn btn-outline" onclick="resetTimer()"><i class="fas fa-redo"></i> Reset</button>
           </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="section-heading">
+            <h2><i class="fas fa-random"></i> Group Generator</h2>
+            <p>Split students into random groups.</p>
+          </div>
+          <div class="filter-bar" style="margin-bottom:1rem;border:none;padding:0">
+            <select id="ggClass" style="flex:1;min-width:120px">
+              <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+            </select>
+            <label style="font-size:.82rem">Groups:</label>
+            <input type="number" id="ggCount" value="3" min="2" max="10" style="width:55px;padding:6px 8px;border:2px solid #e8ddd0;border-radius:8px;text-align:center">
+            <button class="btn btn-primary" onclick="generateGroups()"><i class="fas fa-shuffle"></i> Generate</button>
+          </div>
+          <div id="groupsOutput"></div>
+        </div>
+
+        <div class="panel-card">
+          <div class="section-heading">
+            <h2><i class="fas fa-dice"></i> Name Picker</h2>
+            <p>Pick a random student from the class.</p>
+          </div>
+          <div class="filter-bar" style="margin-bottom:1rem;border:none;padding:0">
+            <select id="npClass" style="flex:1;min-width:120px">
+              <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+            </select>
+            <button class="btn btn-primary" onclick="pickName()"><i class="fas fa-dice"></i> Pick</button>
+            <button class="btn btn-outline" onclick="resetPicker()"><i class="fas fa-redo"></i> Reset</button>
+          </div>
+          <div class="picker-result" id="pickerResult">—</div>
+          <div style="font-size:.8rem;color:#667588;margin-bottom:.5rem">Clicked names are excluded from future picks. Click Reset to include everyone again.</div>
+          <div id="pickerPool"></div>
         </div>
 
         <div class="panel-card" style="grid-column:1/-1">

@@ -1,9 +1,3 @@
-const STUDENT_NAMES = {
-  'Grade 7': ['Alice Chehwan', 'Bassam Feghali', 'Caroline Hage', 'David Khalil', 'Elena Matta', 'Fadi Younes', 'Georges Sfeir', 'Hiba Abi Rached', 'Ibrahim Nasr', 'Joelle Aoun'],
-  'Grade 8': ['Karim Bou Zeid', 'Lara Nassar', 'Mario Chidiac', 'Nadia Rahal', 'Omar Saliba', 'Patricia Gebran', 'Ralph Akl', 'Sandra Tawk', 'Toni Mouawad', 'Yara Haddad'],
-  'Grade 9': ['Adam Kanaan', 'Bella Saadeh', 'Charbel Khoury', 'Diana Abou Jaoude', 'Elias Maalouf', 'Farah El Hage', 'Hassan Moussa', 'Jana Chahine', 'Khalil Hayek', 'Lynn Bitar']
-};
-
 let currentRecords = [];
 let currentClass = 'Grade 7';
 let currentDate = '';
@@ -19,7 +13,8 @@ async function loadAttendance() {
     if (data.length > 0 && data[0].records) {
       currentRecords = data[0].records;
     } else {
-      currentRecords = STUDENT_NAMES[currentClass].map(name => ({ studentName: name, status: 'present' }));
+      const students = await API.get(`/api/students?className=${currentClass}`);
+      currentRecords = students.students.map(s => ({ studentId: s._id, studentName: s.name, status: 'present' }));
     }
     renderAttendanceTable();
     loadHistory();
