@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grades — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+</head>
+<body>
+<div class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Math Teacher Dashboard</h1>
+      <small>Single-teacher classroom platform</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/teacher/dashboard" style="--i:1">Dashboard</a>
+      <a href="/teacher/students" style="--i:2">Students</a>
+      <a href="/teacher/content" style="--i:3">Content</a>
+      <a href="/teacher/grades" class="active" style="--i:4">Grades</a>
+      <a href="/teacher/year-results" style="--i:5">Year Results</a>
+      <a href="/teacher/seating-chart" style="--i:6">Seating Chart</a>
+      <a href="/teacher/attendance" style="--i:7">Attendance</a>
+      <a href="/teacher/productivity" style="--i:8">Productivity</a>
+      <a href="/logout" class="logout" style="--i:9">Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <em id="sideQuote">Loading...</em>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+  <main class="main-content">
+    <div class="container stagger">
+      <div class="page-header">
+        <p class="eyebrow">Assessment Center</p>
+        <h1>Semester Grades</h1>
+        <p>S1/S2/S3/S4: attendance /10, DS /10 each, Big Exam /20. Mid-Year and Final-Year: one grade /60.</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="gcf">Class</label>
+          <select id="gcf"><option value="all">All</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="gyf">Year</label>
+          <select id="gyf"></select>
+        </div>
+        <div class="filter-group">
+          <label for="gpf">Period</label>
+          <select id="gpf"></select>
+        </div>
+        <button class="btn btn-secondary" id="gradeFilterBtn">View</button>
+        <button class="btn btn-secondary btn-sm" id="exportGradesPdf">Export PDF</button>
+      </div>
+
+      <div class="form-card">
+        <h3>Grade Entry</h3>
+        <form id="gradeForm" class="form-row">
+          <div>
+            <label for="gsStudent">Student</label>
+            <select id="gsStudent" required><option value="">Select Student</option></select>
+          </div>
+          <div>
+            <label for="gsPeriod">Period</label>
+            <select id="gsPeriod" required onchange="toggleGradeFields()"><option value="">Period</option></select>
+          </div>
+          <div class="detail-fields" id="detailFields" style="display:flex;gap:0.5rem;flex:2;flex-wrap:wrap">
+            <div style="flex:1;min-width:80px">
+              <label for="gfAtt">Att /10</label>
+              <input type="number" id="gfAtt" min="0" max="10" step="0.5" placeholder="Att" required>
+            </div>
+            <div style="flex:1;min-width:70px">
+              <label for="gfDs1">DS1</label>
+              <input type="number" id="gfDs1" min="0" max="10" step="0.5" placeholder="DS1" required>
+            </div>
+            <div style="flex:1;min-width:70px">
+              <label for="gfDs2">DS2</label>
+              <input type="number" id="gfDs2" min="0" max="10" step="0.5" placeholder="DS2" required>
+            </div>
+            <div style="flex:1;min-width:70px">
+              <label for="gfDs3">DS3</label>
+              <input type="number" id="gfDs3" min="0" max="10" step="0.5" placeholder="DS3" required>
+            </div>
+            <div style="flex:1;min-width:80px">
+              <label for="gfExam">Exam /20</label>
+              <input type="number" id="gfExam" min="0" max="20" step="0.5" placeholder="Exam" required>
+            </div>
+            <div style="flex:1;min-width:80px;display:none" id="simpleField">
+              <label for="gfSimple">Grade /60</label>
+              <input type="number" id="gfSimple" min="0" max="60" step="0.5" placeholder="Grade /60">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:end">Save Grade</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 id="gradeTableLabel">Grades</h2>
+        <p id="gradeCount">0 grades recorded</p>
+        <div class="tbl-responsive mt-1">
+          <table>
+            <thead id="gradesTableHead"></thead>
+            <tbody id="gradesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher-grades.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+</head>
+<body>
+<div class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Math Teacher Dashboard</h1>
+      <small>Single-teacher classroom platform</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/teacher/dashboard" class="active" style="--i:1">Dashboard</a>
+      <a href="/teacher/students" style="--i:2">Students</a>
+      <a href="/teacher/content" style="--i:3">Content</a>
+      <a href="/teacher/grades" style="--i:4">Grades</a>
+      <a href="/teacher/year-results" style="--i:5">Year Results</a>
+      <a href="/teacher/seating-chart" style="--i:6">Seating Chart</a>
+      <a href="/teacher/attendance" style="--i:7">Attendance</a>
+      <a href="/teacher/productivity" style="--i:8">Productivity</a>
+      <a href="/logout" class="logout" style="--i:9">Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <em id="sideQuote">Loading...</em>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+  <main class="main-content">
+    <div class="container stagger">
+      <div class="page-header">
+        <p class="eyebrow" id="academicYear">Academic Year</p>
+        <h1>Dashboard</h1>
+        <p>Welcome back, Boutros.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Students</div>
+          <div class="value" id="totalStudents">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Overall Average</div>
+          <div class="value" id="overallAvg">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Per-Class Semester Averages</h2>
+        <p>Mean final score (/60) by class and term.</p>
+        <div class="tbl-responsive mt-1">
+          <table>
+            <thead>
+              <tr><th>Class</th><th>Students</th><th>S1</th><th>S2</th><th>Mid</th><th>S3</th><th>S4</th><th>Final</th></tr>
+            </thead>
+            <tbody id="avgTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher-dashboard.js"></script>
+</body>
+</html>

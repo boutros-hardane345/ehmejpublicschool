@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teacher Login — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+<div class="login-card">
+  <h1>Math Teacher Dashboard</h1>
+  <p class="subtitle">Single-teacher classroom platform</p>
+  <div class="login-error" id="loginError"></div>
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="boutros.hardane@net.eoe.edu.lb" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Enter your password" required>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+  </form>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/login.js"></script>
+</body>
+</html>

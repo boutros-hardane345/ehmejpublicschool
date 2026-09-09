@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Content — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+</head>
+<body>
+<div class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Math Teacher Dashboard</h1>
+      <small>Single-teacher classroom platform</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/teacher/dashboard" style="--i:1">Dashboard</a>
+      <a href="/teacher/students" style="--i:2">Students</a>
+      <a href="/teacher/content" class="active" style="--i:3">Content</a>
+      <a href="/teacher/grades" style="--i:4">Grades</a>
+      <a href="/teacher/year-results" style="--i:5">Year Results</a>
+      <a href="/teacher/seating-chart" style="--i:6">Seating Chart</a>
+      <a href="/teacher/attendance" style="--i:7">Attendance</a>
+      <a href="/teacher/productivity" style="--i:8">Productivity</a>
+      <a href="/logout" class="logout" style="--i:9">Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <em id="sideQuote">Loading...</em>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+  <main class="main-content">
+    <div class="container stagger">
+      <div class="page-header">
+        <p class="eyebrow">Teaching Hub</p>
+        <h1>Announcements & Exercises</h1>
+        <p>Manage classroom updates and learning files.</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="ccf">Class</label>
+          <select id="ccf"><option value="all">All Classes</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="csf">Semester</label>
+          <select id="csf"><option value="all">All</option><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option></select>
+        </div>
+        <button class="btn btn-secondary" id="contentFilterBtn">Apply</button>
+      </div>
+
+      <div class="split-layout">
+        <div class="form-card">
+          <h3>Post Announcement</h3>
+          <form id="announcementForm">
+            <div class="form-row" style="margin-bottom:0.75rem">
+              <div>
+                <label for="acClass">Class</label>
+                <select id="acClass" required></select>
+              </div>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="acTitle">Title</label>
+              <input type="text" id="acTitle" placeholder="Announcement title" required>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="acContent">Message</label>
+              <textarea id="acContent" placeholder="Write the message for students" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Publish</button>
+          </form>
+        </div>
+
+        <div class="form-card">
+          <h3>Upload Exercise</h3>
+          <form id="exerciseForm">
+            <div class="form-row" style="margin-bottom:0.75rem">
+              <div>
+                <label for="exClass">Class</label>
+                <select id="exClass" required></select>
+              </div>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="exTitle">Title</label>
+              <input type="text" id="exTitle" placeholder="Exercise title" required>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="exDesc">Description</label>
+              <input type="text" id="exDesc" placeholder="Short description">
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="exSem">Semester</label>
+              <select id="exSem"><option value="">No semester</option><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option></select>
+            </div>
+            <div style="margin-bottom:0.75rem">
+              <label for="exFile">File (pdf, png, jpg, txt)</label>
+              <input type="file" id="exFile" accept=".pdf,.png,.jpg,.jpeg,.txt" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="split-layout">
+        <div class="card">
+          <h2>Announcements Feed</h2>
+          <p id="announcementCount">0 found</p>
+          <div class="content-feed" id="announcementsFeed"></div>
+        </div>
+        <div class="card">
+          <h2>Exercises Feed</h2>
+          <p id="exerciseCount">0 found</p>
+          <div class="content-feed" id="exercisesFeed"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher-content.js"></script>
+</body>
+</html>

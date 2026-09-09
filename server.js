@@ -65,7 +65,7 @@ const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floo
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Session
@@ -77,14 +77,9 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 }
 }));
 
-app.use((req, res, next) => {
-  res.locals.dailyMathQuote = getDailyMathQuote();
-  next();
-});
+// No daily quote middleware — quotes loaded client-side via /api/quote
 
-// View engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+// Static HTML pages are served directly from public/
 
 // Multer config
 const storage = multer.diskStorage({
@@ -102,7 +97,7 @@ const h = fn => (req, res, next) => fn(req, res, next).catch(err => { console.er
 
 // Login
 app.get('/login', (req, res) => {
-  res.render('login', { error: null });
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 app.post('/login', (req, res) => {
@@ -112,9 +107,9 @@ app.post('/login', (req, res) => {
 
   if ((email || '').trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
     req.session.isAuthenticated = true;
-    res.redirect('/teacher/dashboard');
+    res.json({ success: true });
   } else {
-    res.render('login', { error: 'Invalid email or password' });
+    res.status(401).json({ error: 'Invalid email or password' });
   }
 });
 
@@ -124,174 +119,25 @@ app.get('/logout', (req, res) => {
 });
 
 // ============ TEACHER ROUTES ============
+// All teacher pages are now static HTML served from public/
+// Auth check is applied; data fetched client-side via /api/*
 
-// Dashboard
-app.get('/teacher/dashboard', isAuth, h(async (req, res) => {
-  const currentYear = getCurrentAcademicYear();
-  const [students, allGrades, announcements, exercises] = await Promise.all([
-    Student.find(), Grade.find(),
-    Announcement.find().sort({createdAt:-1}).limit(5),
-    Exercise.find().sort({createdAt:-1}).limit(5)
-  ]);
-  const classBreakdown = CLASSES.map(c => ({className:c, count:students.filter(s=>s.className===c).length}));
-  const semesterAverages = [1,2,3,4,5,6].map(sem => {
-    const gs = allGrades.filter(g=>g.semester===sem);
-    return {semester:sem, count:gs.length, average:gs.length ? Math.round(gs.reduce((a,g)=>a+g.final60,0)/gs.length*10)/10 : 0};
+const teacherPages = {
+  '/teacher/dashboard': 'teacher/dashboard.html',
+  '/teacher/students': 'teacher/students.html',
+  '/teacher/content': 'teacher/content.html',
+  '/teacher/grades': 'teacher/grades.html',
+  '/teacher/year-results': 'teacher/year-results.html',
+  '/teacher/seating-chart': 'teacher/seating-chart.html',
+  '/teacher/attendance': 'teacher/attendance.html',
+  '/teacher/productivity': 'teacher/productivity.html'
+};
+
+Object.entries(teacherPages).forEach(([route, file]) => {
+  app.get(route, isAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', file));
   });
-  const classAverages = CLASSES.map(c => {
-    const ids = students.filter(s=>s.className===c).map(s=>s._id);
-    const cg = allGrades.filter(g=>ids.some(id=>id.equals(g.studentId)));
-    return {className:c, count:ids.length, semesters:[1,2,3,4,5,6].map(sem=>{
-      const sg = cg.filter(g=>g.semester===sem);
-      return sg.length ? Math.round(sg.reduce((a,g)=>a+g.final60,0)/sg.length*10)/10 : 0;
-    })};
-  });
-  const overallAverage = semesterAverages.reduce((s,x)=>s+x.average,0)/6;
-  res.render('teacher/dashboard', {students,announcements,exercises,currentYear,classBreakdown,classAverages,semesterAverages,overallAverage});
-}));
-
-// Students
-app.get('/teacher/students', isAuth, h(async (req, res) => {
-  const selectedClass = req.query.class || 'all';
-  const selectedYear = req.query.year || getCurrentAcademicYear();
-  const students = await Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({academicYear:-1,className:1,name:1});
-  const academicYears = await getAcademicYears(selectedYear);
-  res.render('teacher/students', {students, classes:CLASSES, academicYears, selectedClass, selectedYear});
-}));
-
-app.post('/teacher/students', isAuth, h(async (req, res) => {
-  const {name,className,academicYear} = req.body;
-  await Student.create({name,className,academicYear:academicYear||getCurrentAcademicYear()});
-  res.redirect(`/teacher/students?class=${encodeURIComponent(className)}&year=${encodeURIComponent(academicYear||getCurrentAcademicYear())}`);
-}));
-
-app.post('/teacher/students/delete/:id', isAuth, h(async (req, res) => {
-  await Student.findByIdAndDelete(req.params.id);
-  res.redirect(req.headers.referer||'/teacher/students');
-}));
-
-app.post('/teacher/students/delete-all', isAuth, h(async (req, res) => {
-  await Student.deleteMany({});
-  await Grade.updateMany({},{$set:{attendance:0,ds:[0,0,0],bigExam:0,rawTotal:0,final60:0}});
-  res.redirect('/teacher/students');
-}));
-
-// Teacher Content
-app.get('/teacher/content', isAuth, h(async (req, res) => {
-  const selectedClass = req.query.class||'all';
-  const selectedSemester = req.query.semester||'all';
-  const af = {}, ef = {};
-  if (selectedClass!=='all') { af.className=selectedClass; ef.className=selectedClass; }
-  const sn = parseInt(selectedSemester,10);
-  if (!isNaN(sn)&&sn>=1&&sn<=4) ef.semester = sn;
-  const [announcements, exercises] = await Promise.all([
-    Announcement.find(af).sort({createdAt:-1}),
-    Exercise.find(ef).sort({createdAt:-1})
-  ]);
-  res.render('teacher/content', {announcements,exercises,classes:CLASSES,selectedClass,selectedSemester});
-}));
-
-app.get('/teacher/announcements', isAuth, (req, res) => {
-  res.redirect('/teacher/content');
 });
-
-app.post('/teacher/announcements', isAuth, h(async (req, res) => {
-  const {className,title,content} = req.body;
-  await Announcement.create({className,title,content});
-  res.redirect(req.headers.referer||'/teacher/content');
-}));
-
-app.post('/teacher/announcements/delete/:id', isAuth, h(async (req, res) => {
-  await Announcement.findByIdAndDelete(req.params.id);
-  res.redirect(req.headers.referer||'/teacher/content');
-}));
-
-// Exercises
-app.get('/teacher/exercises', isAuth, (req, res) => {
-  res.redirect('/teacher/content');
-});
-
-app.post('/teacher/exercises', isAuth, upload.single('file'), h(async (req, res) => {
-  const {className,title,description,semester} = req.body;
-  await Exercise.create({className,title,description,semester,fileUrl:req.file?'/uploads/'+req.file.filename:null,fileType:req.file?.mimetype||'text'});
-  res.redirect(req.headers.referer||'/teacher/content');
-}));
-
-app.post('/teacher/exercises/delete/:id', isAuth, h(async (req, res) => {
-  await Exercise.findByIdAndDelete(req.params.id);
-  res.redirect(req.headers.referer||'/teacher/content');
-}));
-
-// Download exercise file
-app.get('/download/:id', h(async (req, res) => {
-  const exercise = await Exercise.findById(req.params.id);
-  if (!exercise || !exercise.fileUrl) return res.status(404).send('File not found');
-  const filePath = path.join(__dirname, exercise.fileUrl.replace(/^\//, ''));
-  if (!require('fs').existsSync(filePath)) return res.status(404).send('File not found on server');
-  const fileName = exercise.fileUrl.split('/').pop();
-  res.download(filePath, fileName);
-}));
-
-// Grades
-app.get('/teacher/grades', isAuth, h(async (req, res) => {
-  const selectedClass = req.query.class||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedSemester = req.query.semester||'1';
-  const students = await Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({academicYear:-1,className:1,name:1});
-  const studentIds = students.map(s=>s._id);
-  let grades = await Grade.find({studentId:{$in:studentIds}});
-  const sn = parseInt(selectedSemester,10);
-  const periods = [1,2,3,4,5,6];
-  const periodLabels = {1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'};
-  if (!isNaN(sn)&&periods.includes(sn)) grades = grades.filter(g=>g.semester===sn);
-  const academicYears = await getAcademicYears(selectedYear);
-  res.render('teacher/grades', {students,grades,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedSemester,periods,periodLabels});
-}));
-
-app.post('/teacher/grades', isAuth, h(async (req, res) => {
-  const {studentId,semester,attendance,bigExam} = req.body;
-  const sn = parseInt(semester);
-  if (sn === 3 || sn === 6) {
-    const exam = parseScore(bigExam, 60);
-    await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:0,ds:[0,0,0],bigExam:exam,rawTotal:exam,final60:exam},{upsert:true,new:true});
-  } else {
-    const ds = [];
-    for (let i = 1; i <= 3; i++) {
-      const dsRaw = parseScore(req.body['ds'+i], 10);
-      ds.push((dsRaw / 10) * 8);
-    }
-    const attRaw = parseScore(attendance, 10);
-    const att = (attRaw / 10) * 6;
-    const examRaw = parseScore(bigExam, 20);
-    const exam = (examRaw / 20) * 30;
-    const rawTotal = att + ds.reduce((a,b)=>a+b,0) + exam;
-    const final60 = rawTotal;
-    await Grade.findOneAndUpdate({studentId,semester:sn},{studentId,semester:sn,attendance:att,ds,bigExam:exam,rawTotal,final60},{upsert:true,new:true});
-  }
-  res.redirect(req.headers.referer||'/teacher/grades');
-}));
-
-// Year Results
-app.get('/teacher/year-results', isAuth, h(async (req, res) => {
-  const {class:className} = req.query;
-  const selectedClass = className||'all', selectedYear = req.query.year||getCurrentAcademicYear(), selectedStatusFilter = req.query.status||'all';
-  const [students, allGrades] = await Promise.all([
-    Student.find(getStudentFilter({className:selectedClass,academicYear:selectedYear})).sort({name:1}),
-    Grade.find()
-  ]);
-  let results = students.map(student => {
-    const periods = [1,2,3,4,5,6];
-    const gs = periods.map(s => allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
-    const scores = gs.map(g=>g?g.final60:0);
-    const yearAverage = scores.reduce((a,b)=>a+b,0)/6;
-    let statusKey = 'fail';
-    if (yearAverage>=50) statusKey='pass';
-    else if (yearAverage>=40) statusKey='border';
-    return {student,s1:scores[0],s2:scores[1],mid:scores[2],s3:scores[3],s4:scores[4],fin:scores[5],yearAverage,statusKey};
-  });
-  if (selectedStatusFilter!=='all') results = results.filter(r=>r.statusKey===selectedStatusFilter);
-  const summary = {total:results.length,passing:results.filter(r=>r.statusKey==='pass').length,borderline:results.filter(r=>r.statusKey==='border').length,failing:results.filter(r=>r.statusKey==='fail').length};
-  const academicYears = await getAcademicYears(selectedYear);
-  res.render('teacher/year-results', {results,classes:CLASSES,academicYears,selectedClass,selectedYear,selectedStatusFilter,summary});
-}));
 
 // ============ PDF EXPORT ============
 app.get('/teacher/export-year-pdf', isAuth, h(async (req, res) => {
@@ -408,27 +254,12 @@ app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
 }));
 
 // ============ STUDENT PORTAL ============
-app.get(['/portal','/portal/:gradeSlug'], h(async (req, res) => {
-  const {month,semester} = req.query;
-  const className = gradeSlugToClass(req.params.gradeSlug);
-  const isGradeLanding = !req.params.gradeSlug;
-  if (req.params.gradeSlug&&!className) return res.status(404).send('Class portal not found');
-  if (isGradeLanding) return res.render('student/portal',{announcements:[],exercises:[],classes:CLASSES,isGradeLanding,selectedClass:null,portalPath:'/portal'});
-  let [announcements, exercises] = await Promise.all([
-    Announcement.find({className}).sort({createdAt:-1}),
-    Exercise.find({className}).sort({createdAt:-1})
-  ]);
-  if (month) {
-    const start = new Date(new Date(month).getFullYear(),new Date(month).getMonth(),1);
-    const end = new Date(new Date(month).getFullYear(),new Date(month).getMonth()+1,1);
-    announcements = announcements.filter(a => {const d=new Date(a.createdAt); return d>=start&&d<end;});
-    exercises = exercises.filter(e => {const d=new Date(e.createdAt); return d>=start&&d<end;});
-  }
-  if (semester&&!isNaN(semester)) { const sn=parseInt(semester); if(sn>=1&&sn<=4) exercises=exercises.filter(e=>e.semester===sn); }
-  res.render('student/portal',{announcements,exercises,classes:CLASSES,isGradeLanding,selectedClass:className,portalPath:classToPortalPath(className)});
-}));
+app.get(['/portal','/portal/:gradeSlug'], (req, res) => {
+  // Static portal page — client-side JS handles class selection via ?class= param
+  res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+});
 
-// ============ SCHOOL TOOLS API ============
+// ============ TEACHER DASHBOARD API ============
 
 app.get('/api/classes', (req, res) => res.json(CLASSES));
 app.get('/api/period-labels', (req, res) => res.json({1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'}));
