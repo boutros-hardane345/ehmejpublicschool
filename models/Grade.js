@@ -6,5 +6,7 @@ module.exports = mongoose.model('Grade', new mongoose.Schema({
   ds: {type:[Number],default:[0,0,0]},
   bigExam: {type:Number,default:0},
   rawTotal: {type:Number,default:0},
-  final60: {type:Number,default:0}
+  final20: {type:Number,default:0},
+  final60: {type:Number,default:0},
+  numDS: {type:Number,default:3,enum:[1,2,3,4,5]}
 }));

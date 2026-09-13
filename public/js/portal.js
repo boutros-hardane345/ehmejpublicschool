@@ -12,7 +12,7 @@ function renderDirectory() {
   document.getElementById('portalContent').innerHTML =
     '<div class="portal-directory">' +
     CLASSES.map(c =>
-      '<a href="/portal?class=' + encodeURIComponent(c) + '">' + c + '</a>'
+      '<a href="/portal/' + c.toLowerCase().replace(' ', '-') + '">' + c + '</a>'
     ).join('') +
     '</div>';
 }
@@ -82,7 +82,8 @@ function escapeHtml(t) {
 }
 
 const params = new URLSearchParams(window.location.search);
-const selectedClass = params.get('class');
+const slugMatch = /^\/portal\/grade-(7|8|9)$/.exec(window.location.pathname);
+const selectedClass = slugMatch ? 'Grade ' + slugMatch[1] : params.get('class');
 
 loadQuote();
 if (selectedClass && CLASSES.includes(selectedClass)) {

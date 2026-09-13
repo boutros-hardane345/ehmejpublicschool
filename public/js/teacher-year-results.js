@@ -48,10 +48,10 @@ function renderResults(statusFilter) {
       const g = allGrades.find(gr =>
         (gr.studentId === student._id || gr.studentId.toString() === student._id.toString()) && gr.semester === sem
       );
-      return g ? g.final60 : 0;
+      return g ? final20(g) : 0;
     });
     const avg = scores.reduce((a, b) => a + b, 0) / 6;
-    const statusKey = avg >= 50 ? 'pass' : avg >= 40 ? 'border' : 'fail';
+    const statusKey = avg >= 10 ? 'pass' : avg >= 8 ? 'border' : 'fail';
     return { student, scores, avg, statusKey };
   });
 
@@ -113,6 +113,10 @@ function escapeHtml(t) {
   const d = document.createElement('div');
   d.textContent = t;
   return d.innerHTML;
+}
+
+function final20(g) {
+  return typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20) ? g.final20 : ((g.final60 || 0) / 3);
 }
 
 init();

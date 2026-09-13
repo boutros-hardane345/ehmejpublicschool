@@ -1,4 +1,5 @@
 let classesData = [];
+let currentStudents = [];
 
 async function init() {
   const [year, cls, studentsData] = await Promise.all([
@@ -38,6 +39,7 @@ async function loadStudents() {
 }
 
 function renderTable(students) {
+  currentStudents = students || [];
   const tbody = document.getElementById('studentTableBody');
   document.getElementById('deleteAllBtn').style.display = students.length > 0 ? '' : 'none';
   if (students.length === 0) {
@@ -49,9 +51,31 @@ function renderTable(students) {
     '<td>' + escapeHtml(s.name) + '</td>' +
     '<td><span class="badge badge-neutral">' + escapeHtml(s.className) + '</span></td>' +
     '<td>' + (s.academicYear || 'Not set') + '</td>' +
-    '<td><button class="btn btn-danger btn-sm" onclick="deleteStudent(\'' + s._id + '\',this)">Delete</button></td>' +
+    '<td><button class="btn btn-secondary btn-sm" onclick="editStudent(\'' + s._id + '\')">Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteStudent(\'' + s._id + '\',this)">Delete</button></td>' +
     '</tr>'
   ).join('');
+}
+
+async function editStudent(id) {
+  const row = currentStudentById(id);
+  if (!row) return;
+  const name = prompt('Student name', row.name);
+  if (name === null) return;
+  const className = prompt('Class: Grade 7, Grade 8, or Grade 9', row.className);
+  if (className === null) return;
+  const academicYear = prompt('Academic year', row.academicYear || document.getElementById('sYear').value);
+  if (academicYear === null) return;
+  try {
+    await API.put('/api/students/' + id, { name: name.trim(), className: className.trim(), academicYear: academicYear.trim() });
+    showToast('Student updated', 'success');
+    loadStudents();
+  } catch (e) {
+    showToast('Error updating student', 'error');
+  }
+}
+
+function currentStudentById(id) {
+  return currentStudents.find(s => s._id === id);
 }
 
 async function deleteStudent(id, btn) {
