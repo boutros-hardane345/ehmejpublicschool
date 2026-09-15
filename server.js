@@ -22,6 +22,7 @@ const Lesson = require('./models/Lesson');
 const SeatingChart = require('./models/SeatingChart');
 const Schedule = require('./models/Schedule');
 const Todo = require('./models/Todo');
+const Question = require('./models/Question');
 
 const CLASSES = ['Grade 7', 'Grade 8', 'Grade 9'];
 const PERIOD_LABELS = {1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'};
@@ -70,16 +71,16 @@ const classToPortalPath = c => `/portal/${c.toLowerCase().replace(' ','-')}`;
 const parseScore = (v,m) => { const s=parseFloat(v); return isNaN(s)?0:Math.min(Math.max(s,0),m); };
 const getGrade20 = g => {
   if (!g) return 0;
-  if (typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20)) return g.final20;
-  return (g.final60 || 0) / 3;
+  if (typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final54 || g.rawTotal <= 20)) return g.final20;
+  return (g.final54 || 0) / 2.7;
 };
-const hasGrade20 = g => !!g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20);
+const hasGrade20 = g => !!g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final54 || g.rawTotal <= 20);
 const getComponent20 = (g, key, index) => {
   if (!g) return 0;
   if (hasGrade20(g)) return key === 'ds' ? ((g.ds && g.ds[index]) || 0) : (g[key] || 0);
-  if (key === 'attendance') return ((g.attendance || 0) / 6) * 20;
+  if (key === 'attendance') return ((g.attendance || 0) / 10) * 20;
   if (key === 'ds') return (((g.ds && g.ds[index]) || 0) / 8) * 20;
-  if (key === 'bigExam') return ((g.bigExam || 0) / 30) * 20;
+  if (key === 'bigExam') return ((g.bigExam || 0) / 24) * 20;
   return 0;
 };
 const deleteUploadedFile = file => {
@@ -87,14 +88,14 @@ const deleteUploadedFile = file => {
   const filePath = path.join(uploadDir, path.basename(file.filename || ''));
   if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
 };
-const getAttendanceFinal60 = att => (att / 20) * 60;
+const getAttendanceFinal6 = att => (att / 10) * 6;
 const getDSAverage24 = (dsValues, numDS) => {
   const n = Math.max(1, Math.min(numDS, (dsValues || []).length));
   if (n === 0) return 0;
   const sum = dsValues.slice(0, n).reduce((a, b) => a + b, 0);
   return (sum / n / 20) * 24;
 };
-const getExamFinal30 = exam => (exam / 20) * 30;
+const getExamFinal24 = exam => (exam / 20) * 24;
 const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000)%MATH_QUOTES.length]; };
 const isValidClassName = c => CLASSES.includes(c);
 const isValidObjectId = id => mongoose.Types.ObjectId.isValid(id);
@@ -357,7 +358,7 @@ app.get('/download/:id', h(async (req, res) => {
 
 // ============ TEACHER DASHBOARD API ============
 
-const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/content', '/academic-year', '/quote']);
+const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/content', '/academic-year', '/quote', '/questions']);
 app.use('/api', (req, res, next) => {
   if (req.method === 'GET' && publicApiRoutes.has(req.path)) return next();
   return isApiAuth(req, res, next);
@@ -546,17 +547,45 @@ app.post('/api/grades', h(async (req, res) => {
   const exam = parseScore(bigExam, 20);
   if (sn === 3 || sn === 6) {
     const final20 = exam;
-    const final60 = final20 * 3;
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: final20, rawTotal: final60, final20, final60, numDS: 0 }, { upsert: true, new: true });
+    const final54 = final20 * 2.7;
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: final20, rawTotal: final54, final20, final54, numDS: 0 }, { upsert: true, new: true });
   } else {
-    const attFinal60 = getAttendanceFinal60(parseScore(attendance, 20));
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
     const dsAvg24 = getDSAverage24(dsValues, numDSValue);
-    const examFinal30 = getExamFinal30(exam);
-    const final60 = attFinal60 + dsAvg24 + examFinal30;
-    const final20 = final60 / 3;
+    const examFinal24 = getExamFinal24(exam);
+    const final54 = attFinal6 + dsAvg24 + examFinal24;
+    const final20 = final54 / 2.7;
     const paddedDS = [];
     for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 20), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { upsert: true, new: true });
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final54, final20, final54, numDS: numDSValue }, { upsert: true, new: true });
+  }
+  res.json({ success: true });
+}));
+
+app.put('/api/grades/:id', h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid grade id');
+  const existing = await Grade.findById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Grade not found' });
+  const { studentId, semester, attendance, bigExam, ds, numDS } = req.body;
+  const sn = parseInt(semester);
+  if (!PERIODS.includes(sn)) return badRequest(res, 'Invalid period');
+  const numDSValue = parseInt(numDS, 10);
+  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 5) return badRequest(res, 'Invalid numDS');
+  const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
+  const exam = parseScore(bigExam, 20);
+  if (sn === 3 || sn === 6) {
+    const final20 = exam;
+    const final54 = final20 * 2.7;
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: final20, rawTotal: final54, final20, final54, numDS: 0 }, { new: true });
+  } else {
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const dsAvg24 = getDSAverage24(dsValues, numDSValue);
+    const examFinal24 = getExamFinal24(exam);
+    const final54 = attFinal6 + dsAvg24 + examFinal24;
+    const final20 = final54 / 2.7;
+    const paddedDS = [];
+    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final54, final20, final54, numDS: numDSValue }, { new: true });
   }
   res.json({ success: true });
 }));
@@ -724,6 +753,26 @@ app.delete('/api/todos/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid todo id');
   await Todo.findByIdAndDelete(req.params.id);
   res.json({ success: true });
+}));
+
+// Questions
+app.post('/api/questions', h(async (req, res) => {
+  const studentName = cleanText(req.body.studentName);
+  const className = cleanText(req.body.className);
+  const question = cleanText(req.body.question);
+  if (!studentName) return badRequest(res, 'Student name is required');
+  if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
+  if (!question) return badRequest(res, 'Question is required');
+  const q = await Question.create({ studentName, className, question });
+  res.json(q);
+}));
+
+app.get('/api/questions', h(async (req, res) => {
+  const { className } = req.query;
+  const filter = {};
+  if (className && isValidClassName(className)) filter.className = className;
+  const questions = await Question.find(filter).sort({ createdAt: -1 }).limit(100);
+  res.json(questions);
 }));
 
 // Analytics

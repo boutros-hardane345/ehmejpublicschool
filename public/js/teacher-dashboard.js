@@ -56,6 +56,28 @@ async function loadDashboard() {
   } catch (err) {
     document.getElementById('avgTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading data.</td></tr>';
   }
+
+  loadQuestions();
+}
+
+async function loadQuestions() {
+  try {
+    const questions = await API.get('/api/questions');
+    const feed = document.getElementById('questionsFeed');
+    if (!questions || questions.length === 0) {
+      feed.innerHTML = '<p class="empty-state">No questions yet.</p>';
+      return;
+    }
+    feed.innerHTML = questions.map(q =>
+      '<div class="feed-item">' +
+      '<div class="feed-meta"><span class="badge badge-neutral">' + escapeHtml(q.className) + '</span><span>' + formatDate(q.createdAt) + '</span></div>' +
+      '<h4>' + escapeHtml(q.studentName) + '</h4>' +
+      '<p>' + escapeHtml(q.question) + '</p>' +
+      '</div>'
+    ).join('');
+  } catch (e) {
+    document.getElementById('questionsFeed').innerHTML = '<p class="empty-state">Could not load questions.</p>';
+  }
 }
 
 loadQuote();
@@ -63,4 +85,14 @@ loadDashboard();
 
 function final20(g) {
   return typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20) ? g.final20 : ((g.final60 || 0) / 3);
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
