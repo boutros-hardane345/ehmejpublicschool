@@ -60,41 +60,10 @@
     <div class="container">
       <div class="page-hero">
         <p class="eyebrow">Productivity Suite</p>
-        <h1><i class="fas fa-tools"></i> Productivity Tools</h1>
-        <p>Todos, timer, notes — everything you need.</p>
+        <h1><i class="fas fa-tools"></i> Productivity Tools</p>
       </div>
 
       <div class="split-layout">
-        <div class="panel-card">
-          <div class="section-heading">
-            <h2><i class="fas fa-tasks"></i> To-Do List</h2>
-            <p>Manage your tasks.</p>
-          </div>
-          <form onsubmit="addTodo();return false" style="margin-bottom:1rem">
-            <input type="text" id="todoTitle" placeholder="Task title" required style="flex:1;min-width:150px">
-            <select id="todoCategory" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
-              <option value="general">General</option><option value="work">Work</option><option value="personal">Personal</option>
-            </select>
-            <input type="date" id="todoDue" style="padding:9px 12px;border:2px solid #e8ddd0;border-radius:8px">
-            <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add</button>
-          </form>
-          <div id="todoList"></div>
-        </div>
-
-        <div class="panel-card">
-          <div class="section-heading">
-            <h2><i class="fas fa-clock"></i> Pomodoro Timer</h2>
-            <p>Focus for 25 min, break for 5.</p>
-          </div>
-          <div class="pomodoro-stats">Sessions completed: <strong id="sessionCount">0</strong></div>
-          <div class="timer-display" id="timerDisplay">25:00</div>
-          <div class="timer-controls">
-            <button class="btn btn-success" id="timerStartBtn" onclick="startTimer()"><i class="fas fa-play"></i> Start</button>
-            <button class="btn btn-warning" id="timerPauseBtn" onclick="pauseTimer()" style="display:none"><i class="fas fa-pause"></i> Pause</button>
-            <button class="btn btn-outline" onclick="resetTimer()"><i class="fas fa-redo"></i> Reset</button>
-          </div>
-        </div>
-
         <div class="panel-card">
           <div class="section-heading">
             <h2><i class="fas fa-random"></i> Group Generator</h2>
@@ -106,7 +75,7 @@
             </select>
             <label style="font-size:.82rem">Groups:</label>
             <input type="number" id="ggCount" value="3" min="2" max="10" style="width:55px;padding:6px 8px;border:2px solid #e8ddd0;border-radius:8px;text-align:center">
-            <button class="btn btn-primary" onclick="generateGroups()"><i class="fas fa-shuffle"></i> Generate</button>
+            <button class="btn btn-primary" onclick="initGroupGenerator()"><i class="fas fa-shuffle"></i> Generate</button>
           </div>
           <div id="groupsOutput"></div>
         </div>
@@ -120,7 +89,7 @@
             <select id="npClass" style="flex:1;min-width:120px">
               <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
             </select>
-            <button class="btn btn-primary" onclick="pickName()"><i class="fas fa-dice"></i> Pick</button>
+            <button class="btn btn-primary" onclick="initNamePicker()"><i class="fas fa-dice"></i> Pick</button>
             <button class="btn btn-outline" onclick="resetPicker()"><i class="fas fa-redo"></i> Reset</button>
           </div>
           <div class="picker-result" id="pickerResult">—</div>

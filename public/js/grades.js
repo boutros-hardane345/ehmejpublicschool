@@ -84,7 +84,7 @@ function buildDSFields(numDS, g) {
   let html = '';
   const ds = g ? (g.ds || []) : [];
   for (let i = 0; i < numDS; i++) {
-    const val = ds[i] ? (ds[i] / 3).toFixed(1) : '';
+    const val = ds[i] !== undefined ? ds[i] : '';
     html += `<input class="grade-input" type="number" min="0" max="20" step="0.1" value="${val}" id="g_${g ? g.studentId : ''}_ds${i}" data-sid="${g ? g.studentId : ''}" data-ds-index="${i}">`;
   }
   return html;
@@ -100,7 +100,12 @@ function updateRowTotal(sid) {
   }
   const dsAvg = numDS > 0 ? dsSum / numDS : 0;
   const exam = parseFloat(document.getElementById(`g_${sid}_exam`)?.value) || 0;
-  const total = (att / 20 * 60) + (dsAvg / 20 * 24) + (exam / 20 * 30);
+  const sn = parseInt(currentSemester);
+  const hasExam = sn !== 3 && sn !== 6;
+  const attContribution = (att / 10) * 6;
+  const dsContribution = (dsAvg / 20) * (hasExam ? 24 : 54);
+  const examContribution = (exam / 20) * 30;
+  const total = attContribution + dsContribution + examContribution;
   const final20 = total / 3;
   const row = document.getElementById(`g_${sid}_att`)?.closest('tr');
   if (row) {
@@ -128,7 +133,6 @@ async function saveGrade(sid) {
     }
     body.ds = dsValues;
     body.numDS = numDS;
-    body.bigExam = parseFloat(document.getElementById(`g_${sid}_exam`)?.value) || 0;
   }
   try {
     await API.post('/api/grades', body);
@@ -165,7 +169,7 @@ function hasGrade20(g) {
 
 function getAttendanceDisplay20(g) {
   if (!g) return 0;
-  if (hasGrade20(g)) return (g.attendance || 0) / 3;
+  if (hasGrade20(g)) return (g.attendance || 0) / 10 * 20;
   return g.attendance || 0;
 }
 
@@ -178,12 +182,11 @@ function getDSDisplay20(g) {
     return n > 0 ? sum / n : 0;
   }
   const ds = g.ds || [];
-  const sum = ds.slice(0, 3).reduce((a, b) => a + b, 0);
-  return sum / 3;
+  const sum = ds.slice(0, (g.numDS || 3)).reduce((a, b) => a + b, 0);
+  return (g.numDS || 3) > 0 ? sum / (g.numDS || 3) : 0;
 }
 
 function getExamDisplay20(g) {
   if (!g) return 0;
-  if (hasGrade20(g)) return (g.bigExam || 0) / 1.5;
   return g.bigExam || 0;
 }

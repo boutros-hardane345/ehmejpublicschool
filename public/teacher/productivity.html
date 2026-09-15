@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Productivity — Math Teacher Dashboard</title>
-<link rel="stylesheet" href="/css/style.css">
-<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Productivity — Math Teacher Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
 </head>
 <body>
 <div class="sidebar-layout">
@@ -20,9 +20,9 @@
       <a href="/teacher/content" style="--i:3">Content</a>
       <a href="/teacher/grades" style="--i:4">Grades</a>
       <a href="/teacher/year-results" style="--i:5">Year Results</a>
-      <a href="/teacher/seating-chart" style="--i:6">Seating Chart</a>
-      <a href="/teacher/attendance" style="--i:7">Attendance</a>
-      <a href="/teacher/productivity" class="active" style="--i:8">Productivity</a>
+      <a href="/teacher/productivity" style="--i:6">Productivity</a>
+      <a href="/teacher/seating-chart" style="--i:7">Seating Chart</a>
+      <a href="/teacher/attendance" style="--i:8">Attendance</a>
       <a href="/logout" class="logout" style="--i:9">Logout</a>
     </nav>
     <div class="sidebar-footer">
@@ -37,90 +37,52 @@
       <div class="page-header">
         <p class="eyebrow">Tools & Utilities</p>
         <h1>Productivity</h1>
-        <p>Manage tasks, pick names, form groups, and time your work.</p>
+        <p>Pick names and form groups from your class.</p>
       </div>
 
       <div class="split-layout">
         <div class="card tool-card">
-          <h2>Pomodoro Timer</h2>
-          <p>Stay focused with timed work sessions.</p>
-          <div class="timer-display">
-            <div class="timer-ring" id="timerRing">
-              <div class="time" id="timerDisplay">25:00</div>
-            </div>
-            <div class="phase" id="timerPhase">Work</div>
-            <div class="timer-controls">
-              <button class="btn btn-primary btn-sm" id="timerStart">Start</button>
-              <button class="btn btn-secondary btn-sm" id="timerPause">Pause</button>
-              <button class="btn btn-secondary btn-sm" id="timerReset">Reset</button>
-            </div>
+          <div class="section-heading">
+            <h2><i class="fas fa-dice"></i> Name Picker</h2>
           </div>
-        </div>
-
-        <div class="card tool-card">
-          <h2>Random Name Picker</h2>
-          <p>Paste student names and pick one at random.</p>
-          <div style="margin:0.75rem 0">
-            <textarea id="pickerNames" rows="3" placeholder="Enter names, one per line" style="width:100%"></textarea>
+          <div style="margin:1rem 0">
+            <select id="pickerClass" style="width:100%;padding:8px;margin-bottom:8px">
+              <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+            </select>
+            <select id="pickerYear" style="width:100%;padding:8px;margin-bottom:1rem">
+              <option value="2026-2027">2026-2027</option><option value="2025-2026">2025-2026</option>
+            </select>
           </div>
           <div class="picker-display">
-            <div class="result" id="pickerResult">Ready</div>
+            <div class="result" id="teacherPickerResult">Ready</div>
           </div>
-          <div style="display:flex;gap:0.5rem">
-            <button class="btn btn-primary" id="pickNameBtn">Pick One</button>
-            <button class="btn btn-secondary" id="resetPickerBtn">Reset</button>
+          <div style="display:flex;gap:0.5rem;margin-top:1rem">
+            <button class="btn btn-primary" onclick="initNamePicker()"><i class="fas fa-dice"></i> Pick One</button>
+            <button class="btn btn-secondary" onclick="resetPicker()">Reset</button>
           </div>
-        </div>
-      </div>
-
-      <div class="split-layout">
-        <div class="card tool-card">
-          <h2>Group Generator</h2>
-          <p>Split students into random groups.</p>
-          <div style="margin:0.75rem 0">
-            <textarea id="groupNames" rows="3" placeholder="Enter names, one per line" style="width:100%"></textarea>
-          </div>
-          <div class="form-row" style="margin-bottom:0.75rem">
-            <div>
-              <label for="groupSize">Students per group</label>
-              <input type="number" id="groupSize" min="1" max="10" value="3">
-            </div>
-            <div>
-              <label for="numGroups">Number of groups</label>
-              <input type="number" id="numGroups" min="1" max="20" value="0">
-            </div>
-          </div>
-          <button class="btn btn-primary" id="makeGroupsBtn">Make Groups</button>
-          <button class="btn btn-secondary" id="clearGroupsBtn">Clear</button>
-          <div class="groups-container mt-1" id="groupsContainer"></div>
         </div>
 
         <div class="card tool-card">
-          <h2>To-Do List</h2>
-          <p>Keep track of your tasks.</p>
-          <div class="form-row" style="margin-bottom:0.75rem">
-            <div style="flex:2">
-              <input type="text" id="todoTitle" placeholder="Task title">
-            </div>
-            <div style="flex:1">
-              <input type="date" id="todoDue">
-            </div>
-            <div style="flex:1">
-              <select id="todoCat">
-                <option value="">Category</option>
-                <option value="teaching">Teaching</option>
-                <option value="admin">Admin</option>
-                <option value="personal">Personal</option>
-              </select>
-            </div>
-            <button class="btn btn-primary btn-sm" id="addTodoBtn">Add</button>
+          <div class="section-heading">
+            <h2><i class="fas fa-users"></i> Group Generator</h2>
           </div>
-          <div id="todoList"></div>
+          <div style="margin:1rem 0">
+            <select id="pickerClass" style="width:100%;padding:8px;margin-bottom:8px">
+              <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+            </select>
+            <select id="pickerYear" style="width:100%;padding:8px;margin-bottom:1rem">
+              <option value="2026-2027">2026-2027</option><option value="2025-2026">2025-2026</option>
+            </select>
+          </div>
+          <input type="number" id="groupSize" min="1" max="10" value="3" style="width:100%;padding:8px;margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="initGroupGenerator()"><i class="fas fa-shuffle"></i> Generate Groups</button>
+          <div id="teacherGroupsContainer"></div>
         </div>
       </div>
     </div>
   </main>
 </div>
+
 <script src="/js/api.js"></script>
 <script src="/js/teacher-productivity.js"></script>
 </body>

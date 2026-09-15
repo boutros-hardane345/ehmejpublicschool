@@ -71,16 +71,16 @@ const classToPortalPath = c => `/portal/${c.toLowerCase().replace(' ','-')}`;
 const parseScore = (v,m) => { const s=parseFloat(v); return isNaN(s)?0:Math.min(Math.max(s,0),m); };
 const getGrade20 = g => {
   if (!g) return 0;
-  if (typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final54 || g.rawTotal <= 20)) return g.final20;
-  return (g.final54 || 0) / 2.7;
+  if (typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20)) return g.final20;
+  return (g.final60 || 0) / 3;
 };
-const hasGrade20 = g => !!g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final54 || g.rawTotal <= 20);
+const hasGrade20 = g => !!g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20);
 const getComponent20 = (g, key, index) => {
   if (!g) return 0;
   if (hasGrade20(g)) return key === 'ds' ? ((g.ds && g.ds[index]) || 0) : (g[key] || 0);
-  if (key === 'attendance') return ((g.attendance || 0) / 10) * 20;
-  if (key === 'ds') return (((g.ds && g.ds[index]) || 0) / 8) * 20;
-  if (key === 'bigExam') return ((g.bigExam || 0) / 24) * 20;
+  if (key === 'attendance') return ((g.attendance || 0) / 6) * 20;
+  if (key === 'ds') return (((g.ds && g.ds[index]) || 0) / 24) * 20;
+  if (key === 'bigExam') return ((g.bigExam || 0) / 30) * 20;
   return 0;
 };
 const deleteUploadedFile = file => {
@@ -89,13 +89,14 @@ const deleteUploadedFile = file => {
   if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
 };
 const getAttendanceFinal6 = att => (att / 10) * 6;
-const getDSAverage24 = (dsValues, numDS) => {
+const getDSAverage = (dsValues, numDS, hasExam) => {
   const n = Math.max(1, Math.min(numDS, (dsValues || []).length));
   if (n === 0) return 0;
   const sum = dsValues.slice(0, n).reduce((a, b) => a + b, 0);
-  return (sum / n / 20) * 24;
+  if (hasExam) return (sum / n / 20) * 24;
+  return (sum / n / 20) * 54;
 };
-const getExamFinal24 = exam => (exam / 20) * 24;
+const getExamFinal = exam => (exam / 20) * 30;
 const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000)%MATH_QUOTES.length]; };
 const isValidClassName = c => CLASSES.includes(c);
 const isValidObjectId = id => mongoose.Types.ObjectId.isValid(id);
@@ -545,19 +546,53 @@ app.post('/api/grades', h(async (req, res) => {
   if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 5) return badRequest(res, 'Invalid numDS');
   const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
   const exam = parseScore(bigExam, 20);
+  const hasExam = sn !== 3 && sn !== 6;
   if (sn === 3 || sn === 6) {
-    const final20 = exam;
-    const final54 = final20 * 2.7;
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: final20, rawTotal: final54, final20, final54, numDS: 0 }, { upsert: true, new: true });
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
+    const final60 = attFinal6 + dsAvg54;
+    const final20 = final60 / 3;
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: [0, 0, 0] || paddedDS, bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { upsert: true, new: true });
   } else {
     const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
-    const dsAvg24 = getDSAverage24(dsValues, numDSValue);
-    const examFinal24 = getExamFinal24(exam);
-    const final54 = attFinal6 + dsAvg24 + examFinal24;
-    const final20 = final54 / 2.7;
+    const dsAvg24 = getDSAverage(dsValues, numDSValue, true);
+    const examFinal30 = getExamFinal(exam);
+    const final60 = attFinal6 + dsAvg24 + examFinal30;
+    const final20 = final60 / 3;
     const paddedDS = [];
     for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final54, final20, final54, numDS: numDSValue }, { upsert: true, new: true });
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { upsert: true, new: true });
+  }
+  res.json({ success: true });
+}));
+
+app.put('/api/grades/:id', h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid grade id');
+  const existing = await Grade.findById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Grade not found' });
+  const { studentId, semester, attendance, bigExam, ds, numDS } = req.body;
+  const sn = parseInt(semester);
+  if (!PERIODS.includes(sn)) return badRequest(res, 'Invalid period');
+  const numDSValue = parseInt(numDS, 10);
+  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 5) return badRequest(res, 'Invalid numDS');
+  const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
+  const exam = parseScore(bigExam, 20);
+  const hasExam = sn !== 3 && sn !== 6;
+  if (sn === 3 || sn === 6) {
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
+    const final60 = attFinal6 + dsAvg54;
+    const final20 = final60 / 3;
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: [0, 0, 0] || paddedDS, bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { new: true });
+  } else {
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const dsAvg24 = getDSAverage(dsValues, numDSValue, true);
+    const examFinal30 = getExamFinal(exam);
+    const final60 = attFinal6 + dsAvg24 + examFinal30;
+    const final20 = final60 / 3;
+    const paddedDS = [];
+    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { new: true });
   }
   res.json({ success: true });
 }));
@@ -574,18 +609,20 @@ app.put('/api/grades/:id', h(async (req, res) => {
   const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
   const exam = parseScore(bigExam, 20);
   if (sn === 3 || sn === 6) {
-    const final20 = exam;
-    const final54 = final20 * 2.7;
-    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: 0, ds: [0, 0, 0], bigExam: final20, rawTotal: final54, final20, final54, numDS: 0 }, { new: true });
+    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
+    const final60 = attFinal6 + dsAvg54;
+    const final20 = final60 / 3;
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: [0, 0, 0] || paddedDS, bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { new: true });
   } else {
     const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
-    const dsAvg24 = getDSAverage24(dsValues, numDSValue);
-    const examFinal24 = getExamFinal24(exam);
-    const final54 = attFinal6 + dsAvg24 + examFinal24;
-    const final20 = final54 / 2.7;
+    const dsAvg24 = getDSAverage(dsValues, numDSValue, true);
+    const examFinal30 = getExamFinal(exam);
+    const final60 = attFinal6 + dsAvg24 + examFinal30;
+    const final20 = final60 / 3;
     const paddedDS = [];
     for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final54, final20, final54, numDS: numDSValue }, { new: true });
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { new: true });
   }
   res.json({ success: true });
 }));

@@ -112,17 +112,9 @@ function final20(g) {
   return hasFinal20(g) ? g.final20 : ((g.final60 || 0) / 3);
 }
 
-function final60(g) {
-  return g ? (typeof g.final60 === 'number' ? g.final60 : final20(g) * 3) : 0;
-}
-
-function hasGrade20(g) {
-  return !!g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20);
-}
-
 function getAttendanceDisplay20(g) {
   if (!g) return 0;
-  if (hasGrade20(g)) return (g.attendance || 0) / 3;
+  if (hasGrade20(g)) return (g.attendance || 0) / 10 * 20;
   return g.attendance || 0;
 }
 
@@ -141,26 +133,6 @@ function getDSDisplay20(g) {
 
 function getExamDisplay20(g) {
   if (!g) return 0;
-  if (hasGrade20(g)) return (g.bigExam || 0) / 1.5;
-  return g.bigExam || 0;
-}
-
-function getDSDisplay20(g) {
-  if (!g) return 0;
-  if (hasGrade20(g)) {
-    const n = Math.max(1, g.numDS || 1);
-    const ds = g.ds || [];
-    const sum = ds.slice(0, n).reduce((a, b) => a + b, 0);
-    return n > 0 ? sum / n : 0;
-  }
-  const ds = g.ds || [];
-  const sum = ds.slice(0, 3).reduce((a, b) => a + b, 0);
-  return sum / 3;
-}
-
-function getExamDisplay20(g) {
-  if (!g) return 0;
-  if (hasGrade20(g)) return (g.bigExam || 0) / 1.5;
   return g.bigExam || 0;
 }
 
