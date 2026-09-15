@@ -242,26 +242,6 @@ tr:focus-within td{background:rgba(196,149,106,0.06)}
 #qaSection .feed-item p{font-size:0.88rem;margin:0}
 #qaSection .feed-meta{margin-bottom:0.3rem}
 
-/* ====== SEATING CHART ====== */
-.seating-grid{display:grid;gap:0.5rem;max-width:600px;margin:0 auto;padding:1rem}
-.seat-card{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;text-align:center;font-size:0.78rem;font-weight:500;transition:all var(--transition);cursor:pointer;min-height:50px;display:flex;align-items:center;justify-content:center}
-.seat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
-.seat-card.occupied{background:rgba(196,149,106,0.08);border-color:var(--accent);color:var(--text-primary)}
-.seat-card.empty{border-style:dashed;color:var(--text-muted)}
-.seat-card.selected{border-color:var(--positive);box-shadow:0 0 0 3px rgba(90,143,106,0.15)}
-
-/* ====== ATTENDANCE ====== */
-.attendance-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem}
-.att-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:0.8rem 1rem;display:flex;align-items:center;justify-content:space-between;transition:all var(--transition)}
-.att-card:hover{border-color:var(--accent)}
-.att-card .name{font-weight:600;font-size:0.88rem}
-.att-card .toggle{display:flex;gap:0.35rem}
-.att-card .toggle button{padding:0.25rem 0.5rem;border-radius:4px;font-size:0.72rem;font-weight:600;border:1.5px solid var(--border);background:transparent;cursor:pointer;transition:all var(--transition)}
-.att-card .toggle button.present.active{background:var(--positive);color:#fff;border-color:var(--positive)}
-.att-card .toggle button.absent.active{background:var(--danger);color:#fff;border-color:var(--danger)}
-.att-card.present{border-left:3px solid var(--positive)}
-.att-card.absent{border-left:3px solid var(--danger)}
-
 /* ====== PRODUCTIVITY ====== */
 .tool-card{margin-bottom:1.5rem}
 .todo-item{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0;border-bottom:1px solid var(--border);transition:background var(--transition)}

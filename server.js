@@ -17,9 +17,7 @@ const Student = require('./models/Student');
 const Announcement = require('./models/Announcement');
 const Exercise = require('./models/Exercise');
 const Grade = require('./models/Grade');
-const Attendance = require('./models/Attendance');
 const Lesson = require('./models/Lesson');
-const SeatingChart = require('./models/SeatingChart');
 const Schedule = require('./models/Schedule');
 const Todo = require('./models/Todo');
 const Question = require('./models/Question');
@@ -139,8 +137,9 @@ const isAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.re
 const isApiAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.status(401).json({ error: 'Authentication required' });
 
 const protectedStaticPages = new Set([
-  '/', '/index.html', '/attendance.html', '/lesson-planner.html', '/seating-chart.html',
-  '/schedule.html', '/productivity.html', '/students.html', '/content.html', '/grades.html'
+  '/', '/index.html', '/lesson-planner.html',
+  '/schedule.html', '/productivity.html', '/students.html',
+  '/content.html', '/grades.html'
 ]);
 app.use((req, res, next) => {
   const reqPath = decodeURIComponent(req.path).replace(/\\/g, '/').toLowerCase();
@@ -214,8 +213,6 @@ const teacherPages = {
   '/teacher/content': 'teacher/content.html',
   '/teacher/grades': 'teacher/grades.html',
   '/teacher/year-results': 'teacher/year-results.html',
-  '/teacher/seating-chart': 'teacher/seating-chart.html',
-  '/teacher/attendance': 'teacher/attendance.html',
   '/teacher/productivity': 'teacher/productivity.html'
 };
 
@@ -405,24 +402,14 @@ app.put('/api/students/:id', h(async (req, res) => {
   existing.className = className;
   existing.academicYear = academicYear;
   await existing.save();
-  if (oldName !== name) {
-    await Promise.all([
-      Attendance.updateMany({ 'records.studentName': oldName }, { $set: { 'records.$[record].studentName': name } }, { arrayFilters: [{ 'record.studentName': oldName }] }),
-      SeatingChart.updateMany({ 'desks.studentName': oldName }, { $set: { 'desks.$[desk].studentName': name } }, { arrayFilters: [{ 'desk.studentName': oldName }] })
-    ]);
-  }
   res.json(existing);
-}));
+});
 
 app.delete('/api/students/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid student id');
   const student = await Student.findByIdAndDelete(req.params.id);
   if (student) {
-    await Promise.all([
-      Grade.deleteMany({ studentId: student._id }),
-      Attendance.updateMany({}, { $pull: { records: { studentId: student._id } } }),
-      SeatingChart.updateMany({}, { $pull: { desks: { studentName: student.name } } })
-    ]);
+    await Grade.deleteMany({ studentId: student._id });
   }
   res.json({ success: true });
 }));
@@ -430,9 +417,7 @@ app.delete('/api/students/:id', h(async (req, res) => {
 app.delete('/api/students', h(async (req, res) => {
   await Promise.all([
     Student.deleteMany({}),
-    Grade.deleteMany({}),
-    Attendance.deleteMany({}),
-    SeatingChart.deleteMany({})
+    Grade.deleteMany({})
   ]);
   res.json({ success: true });
 }));
@@ -630,49 +615,6 @@ app.put('/api/grades/:id', h(async (req, res) => {
 app.get('/api/academic-year', (req, res) => res.json({ year: getCurrentAcademicYear() }));
 app.get('/api/quote', (req, res) => res.json(getDailyMathQuote()));
 
-// Attendance
-app.post('/api/attendance', h(async (req, res) => {
-  const { date, className, records } = req.body;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return badRequest(res, 'Invalid date');
-  if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (!Array.isArray(records)) return badRequest(res, 'Attendance records are required');
-  const cleanRecords = records.map(r => ({
-    studentId: isValidObjectId(r.studentId) ? r.studentId : undefined,
-    studentName: cleanText(r.studentName),
-    status: r.status === 'absent' ? 'absent' : 'present'
-  })).filter(r => r.studentName);
-  let att = await Attendance.findOne({ date, className });
-  if (att) { att.records = cleanRecords; await att.save(); }
-  else att = await Attendance.create({ date, className, records: cleanRecords });
-  res.json(att);
-}));
-
-app.get('/api/attendance', h(async (req, res) => {
-  const { date, className } = req.query;
-  const filter = {};
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return badRequest(res, 'Invalid date');
-  if (className && !isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (date) filter.date = date;
-  if (className) filter.className = className;
-  res.json(await Attendance.find(filter).sort({ date: -1 }));
-}));
-
-app.get('/api/attendance/stats', h(async (req, res) => {
-  const { className } = req.query;
-  const filter = {};
-  if (className && !isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (className) filter.className = className;
-  const all = await Attendance.find(filter).sort({ date: -1 }).limit(30);
-  let totalPresent = 0, totalAbsent = 0, totalStudents = 0;
-  const dayStats = all.map(a => {
-    const p = a.records.filter(r => r.status === 'present').length;
-    const ab = a.records.filter(r => r.status === 'absent').length;
-    totalPresent += p; totalAbsent += ab; totalStudents += a.records.length;
-    return { date: a.date, className: a.className, present: p, absent: ab, total: a.records.length, rate: a.records.length ? Math.round(p / a.records.length * 100) : 0 };
-  });
-  res.json({ dayStats, overall: { totalPresent, totalAbsent, totalStudents, rate: totalStudents ? Math.round(totalPresent / totalStudents * 100) : 0 } });
-}));
-
 // Lessons
 app.get('/api/lessons', h(async (req, res) => {
   const { className, date } = req.query;
@@ -705,26 +647,6 @@ app.delete('/api/lessons/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid lesson id');
   await Lesson.findByIdAndDelete(req.params.id);
   res.json({ success: true });
-}));
-
-// Seating Chart
-app.get('/api/seating/:className', h(async (req, res) => {
-  if (!isValidClassName(req.params.className)) return badRequest(res, 'Invalid class');
-  const chart = await SeatingChart.findOne({ className: req.params.className });
-  res.json(chart || { className: req.params.className, rows: 4, cols: 5, desks: [] });
-}));
-
-app.post('/api/seating', h(async (req, res) => {
-  const { className, rows, cols, desks } = req.body;
-  const r = parseInt(rows, 10), c = parseInt(cols, 10);
-  if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (isNaN(r) || isNaN(c) || r < 1 || r > 10 || c < 1 || c > 10) return badRequest(res, 'Invalid grid size');
-  if (!Array.isArray(desks)) return badRequest(res, 'Desks are required');
-  const cleanDesks = desks.map(d => ({ row: parseInt(d.row, 10), col: parseInt(d.col, 10), studentName: cleanText(d.studentName) })).filter(d => !isNaN(d.row) && !isNaN(d.col) && d.row >= 0 && d.row < r && d.col >= 0 && d.col < c);
-  let chart = await SeatingChart.findOne({ className });
-  if (chart) { chart.rows = r; chart.cols = c; chart.desks = cleanDesks; await chart.save(); }
-  else chart = await SeatingChart.create({ className, rows: r, cols: c, desks: cleanDesks });
-  res.json(chart);
 }));
 
 // Schedule
@@ -814,28 +736,11 @@ app.get('/api/questions', h(async (req, res) => {
 
 // Analytics
 app.get('/api/analytics', h(async (req, res) => {
-  const attendanceStats = await Attendance.aggregate([
-    { $unwind: '$records' },
-    { $group: { _id: '$records.status', count: { $sum: 1 } } }
-  ]);
-  const present = attendanceStats.find(a => a._id === 'present')?.count || 0;
-  const absent = attendanceStats.find(a => a._id === 'absent')?.count || 0;
-  const totalAttendance = present + absent;
   const lessonCount = await Lesson.countDocuments();
   const todoStats = await Todo.aggregate([{ $group: { _id: '$completed', count: { $sum: 1 } } }]);
   const todosDone = todoStats.find(t => t._id === true)?.count || 0;
   const todosTotal = todoStats.reduce((s, t) => s + t.count, 0);
-  const classAttendance = await Attendance.aggregate([
-    { $unwind: '$records' },
-    { $group: { _id: { className: '$className', status: '$records.status' }, count: { $sum: 1 } } }
-  ]);
-  const classBreakdown = CLASSES.map(c => {
-    const p = classAttendance.find(a => a._id.className === c && a._id.status === 'present')?.count || 0;
-    const a = classAttendance.find(a => a._id.className === c && a._id.status === 'absent')?.count || 0;
-    return { className: c, present: p, absent: a, total: p + a, rate: (p + a) ? Math.round(p / (p + a) * 100) : 0 };
-  });
-  const recentAttendance = await Attendance.find().sort({ date: -1 }).limit(7);
-  res.json({ present, absent, totalAttendance, attendanceRate: totalAttendance ? Math.round(present / totalAttendance * 100) : 0, lessonCount, todosDone, todosTotal, classBreakdown, recentAttendance });
+  res.json({ lessonCount, todosDone, todosTotal });
 }));
 
 // ============ START SERVER ============
