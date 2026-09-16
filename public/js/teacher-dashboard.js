@@ -80,6 +80,46 @@ async function loadQuestions() {
   }
 }
 
+function submitTeacherQuestion() {
+  const studentName = document.getElementById('teacherStudentName').value.trim();
+  const className = document.getElementById('teacherClassName').value.trim();
+  const question = document.getElementById('teacherQuestionInput').value.trim();
+  if (!studentName) return showToast('Student name is required', 'error');
+  if (!isValidClassName(className)) return showToast('Valid class is required', 'error');
+  if (!question) return showToast('Question is required', 'error');
+  API.post('/api/questions', { studentName, className, question }).then(function () {
+    document.getElementById('teacherStudentName').value = '';
+    document.getElementById('teacherClassName').value = '';
+    document.getElementById('teacherQuestionInput').value = '';
+    showToast('Question submitted', 'success');
+    loadQuestions();
+  }).catch(function () {
+    showToast('Error submitting question', 'error');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var submitBtn = document.getElementById('submitTeacherQuestion');
+  if (submitBtn) submitBtn.addEventListener('click', submitTeacherQuestion);
+});
+
+function isValidClassName(c) { return ['Grade 7', 'Grade 8', 'Grade 9'].includes(c); }
+
+function showToast(msg, type) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.className = 'toast ' + (type || '');
+  t.style.display = 'block';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(function () { t.style.display = 'none'; }, 3000);
+}
+
 loadQuote();
 loadDashboard();
 

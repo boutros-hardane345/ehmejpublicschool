@@ -35,7 +35,7 @@ function renderClassPortal(className) {
     '<div id="qaForm">' +
     '<input type="text" id="studentNameInput" placeholder="Your name" style="width:100%;margin-bottom:0.5rem;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem">' +
     '<textarea id="questionInput" placeholder="Write your question..." rows="3" style="width:100%;margin-bottom:0.5rem;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem;resize:vertical"></textarea>' +
-    '<button class="btn btn-primary" id="submitQuestion">Submit Question</button>' +
+    '<button class="btn btn-primary" type="button" id="submitQuestion">Submit Question</button>' +
     '</div>' +
     '<div id="questionsList" class="content-feed"></div>' +
     '</div>' +

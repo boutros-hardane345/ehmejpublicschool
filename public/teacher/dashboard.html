@@ -66,6 +66,15 @@
         <h2>Student Questions</h2>
         <p>Questions submitted by students.</p>
         <div class="content-feed" id="questionsFeed"></div>
+        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <h3 style="margin-bottom:0.75rem">Submit a Question</h3>
+          <div id="teacherQuestionForm">
+            <input type="text" id="teacherStudentName" placeholder="Student name" style="width:100%;margin-bottom:0.5rem;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem">
+            <input type="text" id="teacherClassName" placeholder="Class (e.g. Grade 7)" style="width:100%;margin-bottom:0.5rem;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem">
+            <textarea id="teacherQuestionInput" placeholder="Write your question..." rows="3" style="width:100%;margin-bottom:0.5rem;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem;resize:vertical"></textarea>
+            <button class="btn btn-primary" type="button" id="submitTeacherQuestion">Submit Question</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
