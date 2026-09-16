@@ -233,7 +233,7 @@ window.editGrade = async function (id) {
     const ds = g.ds || [];
     for (let i = 0; i < numDS; i++) {
       const el = document.getElementById('gfDs' + (i + 1));
-      if (el) el.value = ds[i] ? (ds[i] / 3).toFixed(1) : '';
+      if (el) el.value = ds[i] || '';
     }
   }
   showToast('Grade loaded for editing', 'success');

@@ -378,7 +378,7 @@ app.get('/api/students', h(async (req, res) => {
   if (academicYear && academicYear !== 'all' && !isValidAcademicYear(academicYear)) return badRequest(res, 'Invalid academic year');
   const students = await Student.find(getStudentFilter({ className, academicYear })).sort({ academicYear: -1, className: 1, name: 1 });
   const academicYears = await getAcademicYears(academicYear || getCurrentAcademicYear());
-  res.json({ students, classes: CLASSES, academicYears, CLASSES });
+  res.json({ students, classes: CLASSES, academicYears });
 }));
 
 app.post('/api/students', h(async (req, res) => {
@@ -522,7 +522,7 @@ app.get('/api/grades', h(async (req, res) => {
     grades = grades.filter(g => g.semester === sn);
   }
   const academicYears = await getAcademicYears(academicYear || getCurrentAcademicYear());
-  res.json({ students, grades, classes: CLASSES, academicYears, periods: PERIODS, periodLabels: PERIOD_LABELS, CLASSES });
+  res.json({ students, grades, classes: CLASSES, academicYears, periods: PERIODS, periodLabels: PERIOD_LABELS });
 }));
 
 app.post('/api/grades', h(async (req, res) => {
@@ -542,6 +542,8 @@ app.post('/api/grades', h(async (req, res) => {
     const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
     const final60 = attFinal6 + dsAvg54;
     const final20 = final60 / 3;
+    const paddedDS = [];
+    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
     await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS || [0, 0, 0], bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { upsert: true, new: true });
   } else {
     const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
@@ -573,6 +575,8 @@ app.put('/api/grades/:id', h(async (req, res) => {
     const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
     const final60 = attFinal6 + dsAvg54;
     const final20 = final60 / 3;
+    const paddedDS = [];
+    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
     await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS || [0, 0, 0], bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { new: true });
   } else {
     const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
@@ -719,6 +723,6 @@ app.get('/api/analytics', h(async (req, res) => {
 }));
 
 // ============ START SERVER ============
-mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser:true,useUnifiedTopology:true})
+mongoose.connect(process.env.MONGODB_URI)
 .then(() => { const P = process.env.PORT||3000; app.listen(P, () => { const B='='.repeat(50), L=`http://localhost:${P}`; console.log(`${B}\n🚀 Server running!\n${B}\n📡 ${L}\n🔐 ${L}/login\n👨‍🎓 ${L}/portal\n📊 ${L}/teacher/dashboard\n${B}\n✅ MongoDB\n${B}`); }); })
 .catch(err => { console.log('❌ MongoDB:', err.message); process.exit(1); });

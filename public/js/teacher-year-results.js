@@ -31,7 +31,7 @@ async function loadResults() {
     const data = await API.get('/api/students?' + params.toString());
     allStudents = data.students || [];
     const ids = allStudents.map(s => s._id);
-    const gradeRes = await fetch('/api/grades?' + new URLSearchParams({ academicYear: yr }));
+    const gradeRes = await API.get('/api/grades?' + new URLSearchParams({ className: cls, academicYear: yr }));
     allGrades = (await gradeRes.json()).grades || [];
     renderResults(statusFilter);
   } catch (e) {
