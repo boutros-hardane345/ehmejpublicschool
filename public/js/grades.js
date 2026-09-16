@@ -63,7 +63,7 @@ function renderGrades() {
     const fCls = avg >= 10 ? 'grade-pass' : avg >= 8 ? 'grade-border' : 'grade-fail';
     const numDS = g ? (g.numDS || 3) : 3;
     currentNumDS = numDS;
-    const dsFieldsHtml = buildDSFields(numDS, g);
+    const dsFieldsHtml = buildDSFields(numDS, g, s._id);
     return `<tr>
       <td><strong>${s.name}</strong></td>
       <td><span class="class-badge">${s.className}</span></td>
@@ -80,12 +80,12 @@ function renderGrades() {
   });
 }
 
-function buildDSFields(numDS, g) {
+function buildDSFields(numDS, g, sid) {
   let html = '';
   const ds = g ? (g.ds || []) : [];
   for (let i = 0; i < numDS; i++) {
     const val = ds[i] !== undefined ? ds[i] : '';
-    html += `<input class="grade-input" type="number" min="0" max="20" step="0.1" value="${val}" id="g_${g ? g.studentId : ''}_ds${i}" data-sid="${g ? g.studentId : ''}" data-ds-index="${i}">`;
+    html += `<input class="grade-input" type="number" min="0" max="20" step="0.1" value="${val}" id="g_${sid}_ds${i}" data-sid="${sid}" data-ds-index="${i}">`;
   }
   return html;
 }

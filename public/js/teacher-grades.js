@@ -20,6 +20,8 @@ function init() {
     document.getElementById('gsPeriod').value = '1';
     toggleGradeFields();
     loadGrades();
+  }).catch(function (e) {
+    document.getElementById('gradesTableBody').innerHTML = '<tr><td colspan="11" class="text-center text-muted">Error loading grades.</td></tr>';
   });
 }
 
