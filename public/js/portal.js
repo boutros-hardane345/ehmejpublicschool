@@ -70,7 +70,8 @@ function loadQuestions() {
   const el = document.getElementById('questionsList');
   if (!el) return;
   const params = new URLSearchParams(window.location.search);
-  const className = params.get('class') || (window.location.pathname.match(/^\/portal\/grade-(7|8|9)$/) ? 'Grade ' + RegExp.$1 : '');
+  const classNameMatch = window.location.pathname.match(/^\/portal\/grade-(7|8|9)\/?$/);
+  const className = params.get('class') || (classNameMatch ? 'Grade ' + classNameMatch[1] : '');
   if (!className) return;
   API.get('/api/questions?className=' + encodeURIComponent(className)).then(function (questions) {
     if (!questions || questions.length === 0) {

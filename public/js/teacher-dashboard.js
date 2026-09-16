@@ -101,6 +101,8 @@ function submitTeacherQuestion() {
 document.addEventListener('DOMContentLoaded', function () {
   var submitBtn = document.getElementById('submitTeacherQuestion');
   if (submitBtn) submitBtn.addEventListener('click', submitTeacherQuestion);
+  loadQuote();
+  loadDashboard();
 });
 
 function isValidClassName(c) { return ['Grade 7', 'Grade 8', 'Grade 9'].includes(c); }
@@ -119,9 +121,6 @@ function showToast(msg, type) {
   clearTimeout(t._hide);
   t._hide = setTimeout(function () { t.style.display = 'none'; }, 3000);
 }
-
-loadQuote();
-loadDashboard();
 
 function final20(g) {
   return typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20) ? g.final20 : ((g.final60 || 0) / 3);
