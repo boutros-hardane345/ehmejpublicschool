@@ -51,4 +51,6 @@ function getSeason() {
   return ['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()];
 }
 
-document.documentElement.setAttribute('data-season', getSeason());
+document.addEventListener('DOMContentLoaded', function () {
+  document.documentElement.setAttribute('data-season', getSeason());
+});
