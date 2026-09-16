@@ -403,7 +403,7 @@ app.put('/api/students/:id', h(async (req, res) => {
   existing.academicYear = academicYear;
   await existing.save();
   res.json(existing);
-});
+}));
 
 app.delete('/api/students/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid student id');
