@@ -30,7 +30,7 @@ async function loadDashboard() {
 
       const semAvgs = semesters.map(sem => {
         const sg = clsGrades.filter(g => g.semester === sem);
-        const avg = sg.length ? Math.round(sg.reduce((a, g) => a + final20(g), 0) / sg.length * 10) / 10 : 0;
+        const avg = sg.length ? Math.round(sg.reduce((a, g) => a + final60(g), 0) / sg.length * 10) / 10 : 0;
         if (avg > 0) { totalAvgSum += avg; totalAvgCount++; }
         return avg;
       });
@@ -39,7 +39,7 @@ async function loadDashboard() {
         '<td><span class="badge badge-neutral">' + cn + '</span></td>' +
         '<td><strong>' + clsStudents.length + '</strong></td>' +
         semAvgs.map(a =>
-          '<td class="' + (a >= 10 ? 'text-pass' : a >= 8 ? 'text-border' : 'text-fail') + '">' + a.toFixed(1) + '</td>'
+          '<td class="' + (a >= 30 ? 'text-pass' : 'text-fail') + '">' + a.toFixed(1) + '</td>'
         ).join('') +
         '</tr>';
     });
@@ -144,6 +144,13 @@ function showToast(msg, type) {
 
 function final20(g) {
   return typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20) ? g.final20 : ((g.final60 || 0) / 3);
+}
+
+function final60(g) {
+  if (!g) return 0;
+  if (typeof g.final60 === 'number' && g.final60 > 0) return g.final60;
+  if (g.rawTotal) return g.rawTotal;
+  return final20(g) * 3;
 }
 
 function escapeHtml(t) {

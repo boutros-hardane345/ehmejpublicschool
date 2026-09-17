@@ -294,8 +294,8 @@ app.get('/teacher/export-year-pdf', isAuth, h(async (req, res) => {
     const gs = [1,2,3,4,5,6].map(s=>allGrades.find(g=>g.studentId.equals(student._id)&&g.semester===s));
     const sem = gs.map(getFinal60);
     const avg = sem.reduce((a,b)=>a+b,0)/6;
-    const st = avg>=30?'Passing':avg>=24?'Borderline':'Failing';
-    const sc = avg>=30?'#27ae60':avg>=24?'#f39c12':'#e74c3c';
+    const st = avg>=30?'Passing':'Failing';
+    const sc = avg>=30?'#27ae60':'#e74c3c';
     if (i%2===0) doc.rect(50,y-2,520,18).fill('#f8f9fa');
     doc.fillColor('black');
     const name = student.name.length>12?student.name.slice(0,10)+'..':student.name;
@@ -411,11 +411,43 @@ app.get('/download/:id', h(async (req, res) => {
 
 // ============ TEACHER DASHBOARD API ============
 
-const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/content', '/academic-year', '/quote', '/questions']);
+const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/academic-year', '/quote']);
+// /api/content and /api/questions with className now require login (teacher any grade, student only own).
+// This stops anonymous portal views of questions/announcements even via /portal?class= bypass.
+const isTeacherSession = req => !!req.session.isAuthenticated;
+const hasStudentSession = req => !!req.session.studentAccountId;
 app.use('/api', (req, res, next) => {
   if (req.method === 'GET' && publicApiRoutes.has(req.path)) return next();
-  // Portal students post questions anonymously (legacy) — allow public POST, teacher deletes via auth DELETE
-  if (req.method === 'POST' && req.path === '/questions') return next();
+  if (req.path === '/portal/me') return next();
+  if (req.path === '/content' && req.method === 'GET') {
+    if (isTeacherSession(req)) return next();
+    if (hasStudentSession(req)) {
+      if (req.query.className && req.query.className !== req.session.studentClassName) {
+        return res.status(403).json({ error: 'Restricted to your own grade' });
+      }
+      return next();
+    }
+    return res.status(401).json({ error: 'Student login required' });
+  }
+  if (req.path === '/questions') {
+    if (isTeacherSession(req)) return next();
+    if (hasStudentSession(req)) {
+      if (req.method === 'POST') {
+        // Force identity to session, ignore client className spoof
+        req.body.studentName = req.session.studentName;
+        req.body.className = req.session.studentClassName;
+        return next();
+      }
+      if (req.method === 'GET') {
+        if (req.query.className && req.query.className !== req.session.studentClassName) {
+          return res.status(403).json({ error: 'Restricted to your own grade' });
+        }
+        return next();
+      }
+    }
+    return res.status(401).json({ error: 'Login required' });
+  }
+  if (req.path === '/portal/my-ds' || req.path === '/portal/my-thread/message') return next();
   return isApiAuth(req, res, next);
 });
 
@@ -778,22 +810,32 @@ app.put('/api/questions/:id/answer', h(async (req, res) => {
 
 // ============ STUDENT DS-ONLY VIEW (yearly, progressive) ============
 // Returns only DS grades for one student: DS1..DSN (/20), no Att/Exam/Final.
-// Query: ?studentId=... (teacher) — portal student session version added with accounts phase.
+// Yearly quota for portal display: G7=13, G8=19, G9=10 — aggregated from semester
+// records S1(1),S2(2),S3(4),S4(5) each max 5, filled over time, null-padded.
 const DS_QUOTA = { 'Grade 7': 13, 'Grade 8': 19, 'Grade 9': 10 };
+const buildYearlyDs = async (studentId, quota) => {
+  const grades = await Grade.find({ studentId, semester: { $in: [1, 2, 4, 5] } });
+  const bySem = {};
+  grades.forEach(g => { bySem[g.semester] = g; });
+  const flat = [];
+  [1, 2, 4, 5].forEach(sn => {
+    const g = bySem[sn];
+    if (!g || !Array.isArray(g.ds)) return;
+    g.ds.forEach(v => {
+      if (typeof v === 'number' && !isNaN(v)) flat.push(v);
+    });
+  });
+  const ds = [];
+  for (let i = 0; i < quota; i++) ds.push(i < flat.length ? flat[i] : null);
+  return ds;
+};
 app.get('/api/student-ds', h(async (req, res) => {
   const { studentId } = req.query;
   if (!isValidObjectId(studentId)) return badRequest(res, 'Invalid student id');
   const student = await Student.findById(studentId);
   if (!student) return badRequest(res, 'Student not found');
   const quota = DS_QUOTA[student.className] || 20;
-  // Use semester 1 record as yearly DS container (Option A: single list per year, filled over time)
-  let grade = await Grade.findOne({ studentId: student._id, semester: 1 });
-  if (!grade) grade = { ds: [], numDS: quota };
-  const ds = [];
-  for (let i = 0; i < quota; i++) {
-    const v = grade.ds ? grade.ds[i] : undefined;
-    ds.push(typeof v === 'number' && !isNaN(v) ? v : null);
-  }
+  const ds = await buildYearlyDs(student._id, quota);
   res.json({ student: { _id: student._id, name: student.name, className: student.className }, quota, ds, numDS: quota });
 }));
 
@@ -878,13 +920,7 @@ app.get('/api/portal/my-ds', h(async (req, res) => {
   const student = await Student.findById(acc.studentId);
   if (!student) return res.status(404).json({ error: 'Student not found' });
   const quota = DS_QUOTA[student.className] || 20;
-  let grade = await Grade.findOne({ studentId: student._id, semester: 1 });
-  if (!grade) grade = { ds: [] };
-  const ds = [];
-  for (let i = 0; i < quota; i++) {
-    const v = grade.ds ? grade.ds[i] : undefined;
-    ds.push(typeof v === 'number' && !isNaN(v) ? v : null);
-  }
+  const ds = await buildYearlyDs(student._id, quota);
   res.json({ student: { name: student.name, className: student.className }, quota, ds });
 }));
 

@@ -46,25 +46,20 @@ function populateGradeEntryPeriods(labels) {
 
 function populateNumDS() {
   const sel = document.getElementById('gfNumDS');
-  const nums = [];
-  for (let n = 1; n <= 20; n++) nums.push(n);
+  const nums = [1, 2, 3, 4, 5];
   sel.innerHTML = '<option value="">N</option>' + nums.map(n =>
     '<option value="' + n + '">' + n + ' DS</option>'
   ).join('');
 }
 
 function defaultNumDSForClass(cls) {
-  if (cls === 'Grade 7') return 13;
-  if (cls === 'Grade 8') return 19;
-  if (cls === 'Grade 9') return 10;
   return 3;
 }
 
 function getNumDS() {
   const v = parseInt(document.getElementById('gfNumDS').value, 10);
-  if (!isNaN(v) && v >= 1 && v <= 20) return v;
-  const cls = (document.getElementById('gcf') || {}).value;
-  return defaultNumDSForClass(cls);
+  if (!isNaN(v) && v >= 1 && v <= 5) return v;
+  return 3;
 }
 
 function isHasExam() {
@@ -106,7 +101,9 @@ async function loadGrades() {
     populateStudentSelect(data.students);
     renderGradesTable(data, sem);
   } catch (e) {
-    document.getElementById('gradesTableBody').innerHTML = '<tr><td colspan="11" class="text-center text-muted">Error loading grades.</td></tr>';
+    console.error(e);
+    const msg = (e && e.message && e.message.includes('401')) ? 'Session expired — please log in again.' : 'Error loading grades.';
+    document.getElementById('gradesTableBody').innerHTML = '<tr><td colspan="30" class="text-center text-muted">' + msg + '</td></tr>';
   }
 }
 
@@ -165,9 +162,9 @@ function renderGradesTable(data, semester) {
   document.getElementById('gradeTableLabel').textContent = 'Grades - ' + label;
   document.getElementById('gradeCount').textContent = grades.length + ' entered grade' + (grades.length !== 1 ? 's' : '') + ' recorded';
 
-  // Explicit DS1..DSN columns when viewing a single period (supports 13/19/10), avg otherwise
-  const maxDS = isAll ? 0 : Math.max(0, ...grades.map(g => g.numDS || (g.ds || []).length || 0));
-  const showExplicitDS = !isAll && maxDS > 0 && maxDS <= 20;
+  // Explicit DS1..DSN columns when viewing a single period (max 5 per semester), avg otherwise
+  const maxDS = isAll ? 0 : Math.max(0, ...grades.map(g => (g.numDS || 0) > 0 ? g.numDS : ((g.ds || []).length || 3)));
+  const showExplicitDS = !isAll && maxDS > 0 && maxDS <= 5;
   const thead = document.getElementById('gradesTableHead');
   if (showExplicitDS) {
     let dsHeads = '';
@@ -303,13 +300,16 @@ document.getElementById('gradeForm').addEventListener('submit', async function (
   try {
     await API.post('/api/grades', body);
     showToast('Grade saved', 'success');
+    const keptExam = isHasExam();
     this.reset();
     document.getElementById('gsPeriod').value = String(semester);
     document.getElementById('gfNumDS').value = numDS;
+    document.getElementById('gfHasExam').checked = keptExam;
     toggleGradeFields();
     loadGrades();
   } catch (e) {
     showToast('Error saving grade', 'error');
+    console.error(e);
   }
   btn.textContent = original;
 });

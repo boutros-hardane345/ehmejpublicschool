@@ -56,8 +56,8 @@ function resetPicker() {
 // ====== GROUP GENERATOR ======
 
 async function initGroupGenerator() {
-  const className = document.getElementById('pickerClass')?.value || 'Grade 8';
-  const academicYear = document.getElementById('pickerYear')?.value || '2026-2027';
+  const className = document.getElementById('groupClass')?.value || document.getElementById('pickerClass')?.value || 'Grade 8';
+  const academicYear = document.getElementById('groupYear')?.value || document.getElementById('pickerYear')?.value || '';
   const groupCount = parseInt(document.getElementById('groupSize')?.value) || 3;
   try {
     const data = await API.get(`/api/students?className=${className}&academicYear=${academicYear}`);
@@ -86,6 +86,22 @@ async function initGroupGenerator() {
 
 // ====== INIT ======
 
+async function initYears() {
+  try {
+    const year = await API.get('/api/academic-year');
+    const opts = `<option value="${year.year}">${year.year}</option><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option>`;
+    const py = document.getElementById('pickerYear');
+    if (py) py.innerHTML = opts;
+    const gy = document.getElementById('groupYear');
+    if (gy) gy.innerHTML = opts;
+  } catch (e) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadQuote();
+  initYears().then(() => { initNamePicker(); });
+  const pc = document.getElementById('pickerClass');
+  if (pc) pc.addEventListener('change', initNamePicker);
+  const py = document.getElementById('pickerYear');
+  if (py) py.addEventListener('change', initNamePicker);
 });

@@ -30,11 +30,11 @@ async function loadResults() {
   try {
     const data = await API.get('/api/students?' + params.toString());
     allStudents = data.students || [];
-    const ids = allStudents.map(s => s._id);
     const gradeRes = await API.get('/api/grades?' + new URLSearchParams({ className: cls, academicYear: yr }));
-    allGrades = (await gradeRes.json()).grades || [];
+    allGrades = gradeRes.grades || [];
     renderResults(statusFilter);
   } catch (e) {
+    console.error(e);
     document.getElementById('yearResultsBody').innerHTML = '<tr><td colspan="11" class="text-center text-muted">Error loading results.</td></tr>';
   }
 }
@@ -48,10 +48,10 @@ function renderResults(statusFilter) {
       const g = allGrades.find(gr =>
         (gr.studentId === student._id || gr.studentId.toString() === student._id.toString()) && gr.semester === sem
       );
-      return g ? final20(g) : 0;
+      return g ? final60(g) : 0;
     });
     const avg = scores.reduce((a, b) => a + b, 0) / 6;
-    const statusKey = avg >= 10 ? 'pass' : avg >= 8 ? 'border' : 'fail';
+    const statusKey = avg >= 30 ? 'pass' : 'fail';
     return { student, scores, avg, statusKey };
   });
 
@@ -63,13 +63,13 @@ function renderResults(statusFilter) {
   const summary = {
     total: filtered.length,
     pass: filtered.filter(r => r.statusKey === 'pass').length,
-    border: filtered.filter(r => r.statusKey === 'border').length,
     fail: filtered.filter(r => r.statusKey === 'fail').length
   };
 
   document.getElementById('yrTotal').textContent = summary.total;
   document.getElementById('yrPass').textContent = summary.pass;
-  document.getElementById('yrBorder').textContent = summary.border;
+  const borderEl = document.getElementById('yrBorder');
+  if (borderEl) borderEl.textContent = 0;
   document.getElementById('yrFail').textContent = summary.fail;
 
   const tbody = document.getElementById('yearResultsBody');
@@ -79,8 +79,8 @@ function renderResults(statusFilter) {
   }
 
   tbody.innerHTML = filtered.map(r => {
-    const statusClass = r.statusKey === 'pass' ? 'text-pass' : r.statusKey === 'border' ? 'text-border' : 'text-fail';
-    const statusLabel = r.statusKey === 'pass' ? 'Passing' : r.statusKey === 'border' ? 'Borderline' : 'Failing';
+    const statusClass = r.statusKey === 'pass' ? 'text-pass' : 'text-fail';
+    const statusLabel = r.statusKey === 'pass' ? 'Passing' : 'Failing';
     return '<tr>' +
       '<td>' + escapeHtml(r.student.name) + '</td>' +
       '<td><span class="badge badge-neutral">' + escapeHtml(r.student.className) + '</span></td>' +
@@ -117,6 +117,13 @@ function escapeHtml(t) {
 
 function final20(g) {
   return typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20) ? g.final20 : ((g.final60 || 0) / 3);
+}
+
+function final60(g) {
+  if (!g) return 0;
+  if (typeof g.final60 === 'number' && g.final60 > 0) return g.final60;
+  if (g.rawTotal) return g.rawTotal;
+  return final20(g) * 3;
 }
 
 init();
