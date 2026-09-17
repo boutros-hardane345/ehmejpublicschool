@@ -425,6 +425,7 @@ const hasStudentSession = req => !!req.session.studentAccountId;
 app.use('/api', (req, res, next) => {
   if (req.method === 'GET' && publicApiRoutes.has(req.path)) return next();
   if (req.path === '/portal/me') return next();
+  if (req.path === '/login') return next();
   if (req.path === '/content' && req.method === 'GET') {
     if (isTeacherSession(req)) return next();
     if (hasStudentSession(req)) {
