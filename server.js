@@ -129,23 +129,28 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI, touchAfter: 24 * 3600 }),
   cookie: { maxAge: 1000 * 60 * 60 * 24, httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' }
 }));
 
-const isAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.redirect('/login');
-const isApiAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.status(401).json({ error: 'Authentication required' });
+app.use((err, req, res, next) => {
+  console.error('Session error:', err);
+  res.status(500).send('Session error');
+});
 
 const protectedStaticPages = new Set([
   '/', '/index.html', '/lesson-planner.html',
   '/schedule.html', '/productivity.html', '/students.html',
   '/content.html', '/grades.html'
 ]);
+
+const isAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.redirect('/login');
+const isApiAuth = (req, res, next) => req.session.isAuthenticated ? next() : res.status(401).json({ error: 'Authentication required' });
+
 app.use((req, res, next) => {
   const reqPath = decodeURIComponent(req.path).replace(/\\/g, '/').toLowerCase();
   const isProtectedHtml = reqPath.startsWith('/teacher/') || protectedStaticPages.has(reqPath);
@@ -724,5 +729,11 @@ app.get('/api/analytics', h(async (req, res) => {
 
 // ============ START SERVER ============
 mongoose.connect(process.env.MONGODB_URI)
-.then(() => { const P = process.env.PORT||3000; app.listen(P, () => { const B='='.repeat(50), L=`http://localhost:${P}`; console.log(`${B}\n🚀 Server running!\n${B}\n📡 ${L}\n🔐 ${L}/login\n👨‍🎓 ${L}/portal\n📊 ${L}/teacher/dashboard\n${B}\n✅ MongoDB\n${B}`); }); })
+.then(() => {
+  const P = process.env.PORT||3000;
+  app.listen(P, () => {
+    const B='='.repeat(50), L=`http://localhost:${P}`;
+    console.log(`${B}\n🚀 Server running!\n${B}\n📡 ${L}\n🔐 ${L}/login\n👨‍🎓 ${L}/portal\n📊 ${L}/teacher/dashboard\n${B}\n✅ MongoDB\n${B}`);
+  });
+})
 .catch(err => { console.log('❌ MongoDB:', err.message); process.exit(1); });
