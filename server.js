@@ -257,7 +257,8 @@ const teacherPages = {
   '/teacher/year-results': 'teacher/year-results.html',
   '/teacher/productivity': 'teacher/productivity.html',
   '/teacher/logins': 'teacher/logins.html',
-  '/teacher/chats': 'teacher/chats.html'
+  '/teacher/chats': 'teacher/chats.html',
+  '/teacher/ds-grades': 'teacher/ds-grades.html'
 };
 
 Object.entries(teacherPages).forEach(([route, file]) => {
@@ -659,6 +660,62 @@ app.put('/api/grades/:id', h(async (req, res) => {
     const final60 = attFinal6 + dsAvg24 + examFinal30;
     const final20 = final60 / 3;
     await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: att10, ds: dsValues, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue, hasExam: true }, { new: true });
+  }
+  res.json({ success: true });
+}));
+
+// ============ DS GRADES SECTION (per class, per student yearly DS -> portal) ============
+// Mapping yearly DS index into semester docs (each max 5): G7=13, G8=19, G9=10
+const DS_SPLIT = {
+  'Grade 7': [{ sn: 1, from: 0, to: 5 }, { sn: 2, from: 5, to: 10 }, { sn: 4, from: 10, to: 13 }],
+  'Grade 8': [{ sn: 1, from: 0, to: 5 }, { sn: 2, from: 5, to: 10 }, { sn: 4, from: 10, to: 15 }, { sn: 5, from: 15, to: 19 }],
+  'Grade 9': [{ sn: 1, from: 0, to: 5 }, { sn: 2, from: 5, to: 10 }]
+};
+const recomputeFinal = (att10, dsArr, exam, hasExam) => {
+  const n = dsArr.length;
+  if (!hasExam) {
+    const f60 = getAttendanceFinal6(att10) + getDSAverage(dsArr, n, false);
+    return { final60: f60, final20: f60 / 3 };
+  }
+  const f60 = getAttendanceFinal6(att10) + getDSAverage(dsArr, n, true) + getExamFinal(exam);
+  return { final60: f60, final20: f60 / 3 };
+};
+// GET whole class yearly DS table: [{student, ds[quota]}]
+app.get('/api/ds-grades', h(async (req, res) => {
+  const { className, academicYear } = req.query;
+  if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
+  const students = await Student.find(getStudentFilter({ className, academicYear })).sort({ name: 1 });
+  const out = [];
+  for (const s of students) {
+    const quota = DS_QUOTA[s.className] || 20;
+    out.push({ student: { _id: s._id, name: s.name, className: s.className }, quota, ds: await buildYearlyDs(s._id, quota) });
+  }
+  res.json({ students: out });
+}));
+// POST one student yearly DS: {studentId, ds[quota]} — splits into semester docs, preserves Att/Exam/hasExam
+app.post('/api/ds-grades', h(async (req, res) => {
+  const { studentId, ds } = req.body;
+  if (!isValidObjectId(studentId)) return badRequest(res, 'Invalid student id');
+  const student = await Student.findById(studentId);
+  if (!student) return badRequest(res, 'Student not found');
+  const quota = DS_QUOTA[student.className] || 20;
+  if (!Array.isArray(ds) || ds.length !== quota) return badRequest(res, 'Invalid DS array length');
+  const cleaned = ds.map(v => (v === '' || v === null || v === undefined) ? null : (() => { const s = parseFloat(v); return isNaN(s) ? null : Math.min(Math.max(s, 0), 20); })());
+  const split = DS_SPLIT[student.className] || [{ sn: 1, from: 0, to: quota }];
+  for (const { sn, from, to } of split) {
+    const slice = cleaned.slice(from, to);
+    const numDS = to - from;
+    const dsValues = parseDSArray(slice, numDS);
+    let g = await Grade.findOne({ studentId: student._id, semester: sn });
+    const att10 = g ? g.attendance || 0 : 0;
+    const exam = g ? g.bigExam || 0 : 0;
+    const hasExamValue = g && g.hasExam !== undefined ? !!g.hasExam : (sn !== 3 && sn !== 6);
+    const { final60, final20 } = recomputeFinal(att10, dsValues, exam, hasExamValue);
+    await Grade.findOneAndUpdate(
+      { studentId: student._id, semester: sn },
+      { studentId: student._id, semester: sn, attendance: att10, ds: dsValues, bigExam: hasExamValue ? exam : 0, rawTotal: final60, final20, final60, numDS, hasExam: hasExamValue },
+      { upsert: true, new: true }
+    );
   }
   res.json({ success: true });
 }));

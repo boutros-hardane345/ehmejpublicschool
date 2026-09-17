@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DS Grades — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+</head>
+<body>
+<div class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Math Teacher Dashboard</h1>
+      <small>Single-teacher classroom platform</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/teacher/dashboard" style="--i:1">Dashboard</a>
+      <a href="/teacher/students" style="--i:2">Students</a>
+      <a href="/teacher/content" style="--i:3">Content</a>
+      <a href="/teacher/grades" style="--i:4">Grades</a>
+      <a href="/teacher/ds-grades" class="active" style="--i:5">DS Grades</a>
+      <a href="/teacher/year-results" style="--i:6">Year Results</a>
+      <a href="/teacher/productivity" style="--i:7">Productivity</a>
+      <a href="/teacher/logins" style="--i:8">Logins</a>
+      <a href="/teacher/chats" style="--i:9">Chats</a>
+      <a href="/logout" class="logout" style="--i:10">Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <em id="sideQuote">Loading...</em>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+  <main class="main-content">
+    <div class="container stagger">
+      <div class="page-header">
+        <p class="eyebrow">DS Entry</p>
+        <h1>DS Grades</h1>
+        <p>Enter each DS per student for the class. Shown in each student’s portal as his own DS list (/20). Empty = waiting (—).</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="dcf">Class</label>
+          <select id="dcf">
+            <option value="Grade 7">Grade 7 (13 DS)</option>
+            <option value="Grade 8">Grade 8 (19 DS)</option>
+            <option value="Grade 9">Grade 9 (10 DS)</option>
+          </select>
+        </div>
+        <div class="filter-group" style="flex:2">
+          <label for="dsearch">Search</label>
+          <input type="text" id="dsearch" placeholder="Search student...">
+        </div>
+        <button class="btn btn-secondary" id="dsReloadBtn">View</button>
+        <button class="btn btn-primary" id="dsSaveAllBtn">Save all</button>
+      </div>
+
+      <div class="card">
+        <h2 id="dsTableLabel">DS Grades</h2>
+        <p id="dsCount">0 students</p>
+        <div class="tbl-responsive mt-1" style="overflow-x:auto">
+          <table>
+            <thead id="dsTableHead"></thead>
+            <tbody id="dsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher-ds-grades.js"></script>
+</body>
+</html>
