@@ -46,13 +46,31 @@ function populateGradeEntryPeriods(labels) {
 
 function populateNumDS() {
   const sel = document.getElementById('gfNumDS');
-  sel.innerHTML = '<option value="">N</option>' + [1,2,3,4,5].map(n =>
+  const nums = [];
+  for (let n = 1; n <= 20; n++) nums.push(n);
+  sel.innerHTML = '<option value="">N</option>' + nums.map(n =>
     '<option value="' + n + '">' + n + ' DS</option>'
   ).join('');
 }
 
+function defaultNumDSForClass(cls) {
+  if (cls === 'Grade 7') return 13;
+  if (cls === 'Grade 8') return 19;
+  if (cls === 'Grade 9') return 10;
+  return 3;
+}
+
 function getNumDS() {
-  return parseInt(document.getElementById('gfNumDS').value, 10) || 3;
+  const v = parseInt(document.getElementById('gfNumDS').value, 10);
+  if (!isNaN(v) && v >= 1 && v <= 20) return v;
+  const cls = (document.getElementById('gcf') || {}).value;
+  return defaultNumDSForClass(cls);
+}
+
+function isHasExam() {
+  const el = document.getElementById('gfHasExam');
+  if (!el) return true;
+  return !!el.checked;
 }
 
 function buildDSFields(numDS) {
@@ -122,15 +140,15 @@ function getAttendanceDisplay20(g) {
 
 function getDSDisplay20(g) {
   if (!g) return 0;
-  if (hasGrade20(g)) {
-    const n = Math.max(1, g.numDS || 1);
-    const ds = g.ds || [];
-    const sum = ds.slice(0, n).reduce((a, b) => a + b, 0);
-    return n > 0 ? sum / n : 0;
-  }
-  const ds = g.ds || [];
-  const sum = ds.slice(0, 3).reduce((a, b) => a + b, 0);
-  return sum / 3;
+  const ds = (g.ds || []).filter(v => typeof v === 'number' && !isNaN(v));
+  if (ds.length === 0) return 0;
+  return ds.reduce((a, b) => a + b, 0) / ds.length;
+}
+
+function hasExamFor(g) {
+  if (!g) return true;
+  if (g.hasExam !== undefined) return !!g.hasExam;
+  return g.semester !== 3 && g.semester !== 6;
 }
 
 function getExamDisplay20(g) {
@@ -147,16 +165,21 @@ function renderGradesTable(data, semester) {
   document.getElementById('gradeTableLabel').textContent = 'Grades - ' + label;
   document.getElementById('gradeCount').textContent = grades.length + ' entered grade' + (grades.length !== 1 ? 's' : '') + ' recorded';
 
+  // Explicit DS1..DSN columns when viewing a single period (supports 13/19/10), avg otherwise
+  const maxDS = isAll ? 0 : Math.max(0, ...grades.map(g => g.numDS || (g.ds || []).length || 0));
+  const showExplicitDS = !isAll && maxDS > 0 && maxDS <= 20;
   const thead = document.getElementById('gradesTableHead');
-  if (isSimple) {
-    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Grade /20</th><th>Actions</th></tr>';
+  if (showExplicitDS) {
+    let dsHeads = '';
+    for (let i = 1; i <= maxDS; i++) dsHeads += '<th>DS' + i + ' /20</th>';
+    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Exam?</th>' + dsHeads + '<th>Exam /20</th><th>Final /20</th><th>Actions</th></tr>';
   } else {
-    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Att /20</th><th>DS avg /20</th><th>Exam /20</th><th>Final /20</th><th>Actions</th></tr>';
+    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Exam?</th><th>Att /20</th><th>DS avg /20</th><th>Exam /20</th><th>Final /20</th><th>Actions</th></tr>';
   }
 
   const tbody = document.getElementById('gradesTableBody');
   if (grades.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">No grades saved for this view.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="30" class="text-center text-muted">No grades saved for this view.</td></tr>';
     return;
   }
 
@@ -169,17 +192,24 @@ function renderGradesTable(data, semester) {
       const cn = '<span class="badge badge-neutral">' + escapeHtml(s.className) + '</span>';
       const period = periodLabels[g.semester] || 'S' + g.semester;
       const editBtn = '<button class="btn btn-secondary btn-sm" onclick="editGrade(\'' + g._id + '\')">Edit</button>';
-      if (g.semester === 3 || g.semester === 6) {
-        if (!isAll && isSimple) {
-          return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td><strong>' + final20(g).toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
+      const examBadge = hasExamFor(g) ? '<span class="badge badge-neutral">Exam</span>' : '<span class="badge">No exam</span>';
+      if (showExplicitDS) {
+        const n = maxDS;
+        const ds = g.ds || [];
+        let dsCells = '';
+        for (let i = 0; i < n; i++) {
+          const v = ds[i];
+          dsCells += '<td>' + ((v === null || v === undefined || isNaN(v)) ? '<span class="text-muted">—</span>' : Number(v).toFixed(1)) + '</td>';
         }
-        return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td colspan="4" class="text-muted">Single period grade</td><td><strong>' + final20(g).toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
+        const exam20 = hasExamFor(g) ? getExamDisplay20(g) : null;
+        const fin20 = final20(g);
+        return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td>' + dsCells + '<td>' + (exam20 === null ? '<span class="text-muted">—</span>' : exam20.toFixed(1)) + '</td><td><strong>' + fin20.toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
       }
       const att20 = getAttendanceDisplay20(g);
       const ds20 = getDSDisplay20(g);
       const exam20 = getExamDisplay20(g);
       const fin20 = final20(g);
-      return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + att20.toFixed(1) + '</td><td>' + ds20.toFixed(1) + '</td><td>' + exam20.toFixed(1) + '</td><td><strong>' + fin20.toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
+      return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td><td>' + att20.toFixed(1) + '</td><td>' + ds20.toFixed(1) + '</td><td>' + exam20.toFixed(1) + '</td><td><strong>' + fin20.toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
     });
   tbody.innerHTML = rows.join('');
 }
@@ -188,7 +218,13 @@ window.toggleGradeFields = function () {
   const v = parseInt(document.getElementById('gsPeriod').value, 10);
   const simple = document.getElementById('gfSimple');
   const simpleField = document.getElementById('simpleField');
-  const isSimple = v === 3 || v === 6;
+  // Manual checkbox overrides automatic rule; default checked except Mid/Final
+  const hasExamBox = document.getElementById('gfHasExam');
+  if (hasExamBox && document.activeElement !== hasExamBox) {
+    if (v === 3 || v === 6) hasExamBox.checked = false;
+    else if (v) hasExamBox.checked = true;
+  }
+  const isSimple = false;
   const numDS = getNumDS();
   buildDSFields(numDS);
 
@@ -203,15 +239,15 @@ window.toggleGradeFields = function () {
     });
   }
 
-  simpleField.style.display = isSimple ? '' : 'none';
-  simple.disabled = !isSimple;
-  simple.required = isSimple;
-
-  if (!v) {
-    simpleField.style.display = 'none';
-    simple.disabled = true;
-    simple.required = false;
+  // Exam input shown only when checkbox checked; simple legacy field hidden (formula handles no-exam)
+  const examInput = document.getElementById('gfExam');
+  if (examInput) {
+    examInput.closest('div').style.display = isHasExam() ? '' : 'none';
+    examInput.required = isHasExam();
   }
+  simpleField.style.display = 'none';
+  simple.disabled = true;
+  simple.required = false;
 };
 
 window.editGrade = async function (id) {
@@ -223,18 +259,19 @@ window.editGrade = async function (id) {
   document.getElementById('gsStudent').value = g.studentId;
   document.getElementById('gsPeriod').value = String(g.semester);
   document.getElementById('gfNumDS').value = g.numDS || 3;
+  const hasExamBox = document.getElementById('gfHasExam');
+  if (hasExamBox) hasExamBox.checked = (g.hasExam !== undefined ? !!g.hasExam : (g.semester !== 3 && g.semester !== 6));
   toggleGradeFields();
-  if (g.semester === 3 || g.semester === 6) {
-    document.getElementById('gfSimple').value = final20(g).toFixed(1);
-  } else {
-    document.getElementById('gfAtt').value = getAttendanceDisplay20(g).toFixed(1);
-    document.getElementById('gfExam').value = getExamDisplay20(g).toFixed(1);
-    const numDS = g.numDS || 3;
-    const ds = g.ds || [];
-    for (let i = 0; i < numDS; i++) {
-      const el = document.getElementById('gfDs' + (i + 1));
-      if (el) el.value = ds[i] || '';
-    }
+  // Re-apply saved checkbox after toggle defaults
+  if (hasExamBox) hasExamBox.checked = (g.hasExam !== undefined ? !!g.hasExam : (g.semester !== 3 && g.semester !== 6));
+  toggleGradeFields();
+  document.getElementById('gfAtt').value = getAttendanceDisplay20(g).toFixed(1);
+  document.getElementById('gfExam').value = getExamDisplay20(g).toFixed(1);
+  const numDS = g.numDS || 3;
+  const ds = g.ds || [];
+  for (let i = 0; i < numDS; i++) {
+    const el = document.getElementById('gfDs' + (i + 1));
+    if (el) el.value = (ds[i] === null || ds[i] === undefined) ? '' : ds[i];
   }
   showToast('Grade loaded for editing', 'success');
 };
@@ -255,14 +292,13 @@ document.getElementById('gradeForm').addEventListener('submit', async function (
   const numDS = getNumDS();
   const dsValues = getDSValues(numDS);
 
-  let body = { studentId, semester, numDS };
-  if (semester === 3 || semester === 6) {
-    body.bigExam = document.getElementById('gfSimple').value;
-  } else {
-    body.attendance = document.getElementById('gfAtt').value;
-    body.ds = dsValues;
-    body.bigExam = document.getElementById('gfExam').value;
+  // Empty DS inputs stay empty (null) so progressive yearly fill averages only filled slots
+  const rawDs = [];
+  for (let i = 0; i < numDS; i++) {
+    const el = document.getElementById('gfDs' + (i + 1));
+    rawDs.push(el && el.value !== '' ? el.value : null);
   }
+  let body = { studentId, semester, numDS, hasExam: isHasExam(), attendance: document.getElementById('gfAtt').value, ds: rawDs, bigExam: document.getElementById('gfExam').value };
 
   try {
     await API.post('/api/grades', body);

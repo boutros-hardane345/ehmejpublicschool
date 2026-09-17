@@ -73,11 +73,31 @@ async function loadQuestions() {
       '<div class="feed-meta"><span class="badge badge-neutral">' + escapeHtml(q.className) + '</span><span>' + formatDate(q.createdAt) + '</span></div>' +
       '<h4>' + escapeHtml(q.studentName) + '</h4>' +
       '<p>' + escapeHtml(q.question) + '</p>' +
+      (q.answer ? '<p style="margin-top:.4rem;border-left:3px solid var(--border);padding-left:.6rem"><strong>Reply:</strong> ' + escapeHtml(q.answer) + '</p>' : '') +
+      '<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">' +
+      '<input type="text" placeholder="Write reply..." id="ans_' + q._id + '" value="' + escapeHtml(q.answer || '') + '" style="flex:1;min-width:140px;padding:.4rem .6rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)">' +
+      '<button class="btn btn-secondary btn-sm" onclick="answerQuestion(\'' + q._id + '\')">Reply</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="deleteQuestion(\'' + q._id + '\')">Delete</button>' +
+      '</div>' +
       '</div>'
     ).join('');
   } catch (e) {
     document.getElementById('questionsFeed').innerHTML = '<p class="empty-state">Could not load questions.</p>';
   }
+}
+
+async function deleteQuestion(id) {
+  if (!confirm('Delete this question?')) return;
+  await API.del('/api/questions/' + id);
+  loadQuestions();
+}
+
+async function answerQuestion(id) {
+  const el = document.getElementById('ans_' + id);
+  const answer = el ? el.value : '';
+  await API.put('/api/questions/' + id + '/answer', { answer });
+  showToast('Reply saved', 'success');
+  loadQuestions();
 }
 
 function submitTeacherQuestion() {

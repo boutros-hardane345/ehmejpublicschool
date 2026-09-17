@@ -70,6 +70,9 @@
             <label for="gfNumDS">DS Assignments</label>
             <select id="gfNumDS" onchange="toggleGradeFields()" required><option value="">N</option></select>
           </div>
+          <div style="flex:1;min-width:140px;align-self:end">
+            <label style="display:flex;gap:0.4rem;align-items:center;font-weight:600"><input type="checkbox" id="gfHasExam" checked onchange="toggleGradeFields()"> Final exam in this semester?</label>
+          </div>
           <div id="dsFields" style="display:flex;gap:0.5rem;flex:2;flex-wrap:wrap"></div>
 <div style="flex:1;min-width:80px">
               <label for="gfAtt">Att /10</label>

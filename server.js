@@ -21,6 +21,8 @@ const Lesson = require('./models/Lesson');
 const Schedule = require('./models/Schedule');
 const Todo = require('./models/Todo');
 const Question = require('./models/Question');
+const StudentAccount = require('./models/StudentAccount');
+const Thread = require('./models/Thread');
 
 const CLASSES = ['Grade 7', 'Grade 8', 'Grade 9'];
 const PERIOD_LABELS = {1:'S1',2:'S2',3:'Mid-Year',4:'S3',5:'S4',6:'Final-Year'};
@@ -92,12 +94,32 @@ const deleteUploadedFile = file => {
   if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
 };
 const getAttendanceFinal6 = att => (att / 10) * 6;
+// Accepts attendance sent as /10 (stored) or /20 (display) — auto-converts >10
+const parseAttendance10 = v => {
+  const s = parseFloat(v);
+  if (isNaN(s)) return 0;
+  const as10 = s > 10 ? s / 2 : s;
+  return Math.min(Math.max(as10, 0), 10);
+};
+// DS values may contain null for not-yet-filled slots (progressive yearly fill)
+const parseDSArray = (ds, numDS) => {
+  const out = [];
+  for (let i = 0; i < numDS; i++) {
+    const raw = Array.isArray(ds) ? ds[i] : undefined;
+    if (raw === '' || raw === null || raw === undefined) { out.push(null); continue; }
+    const s = parseFloat(raw);
+    out.push(isNaN(s) ? null : Math.min(Math.max(s, 0), 20));
+  }
+  return out;
+};
 const getDSAverage = (dsValues, numDS, hasExam) => {
-  const n = Math.max(1, Math.min(numDS, (dsValues || []).length));
-  if (n === 0) return 0;
-  const sum = dsValues.slice(0, n).reduce((a, b) => a + b, 0);
-  if (hasExam) return (sum / n / 20) * 24;
-  return (sum / n / 20) * 54;
+  const sliced = (dsValues || []).slice(0, numDS);
+  const filled = sliced.filter(v => typeof v === 'number' && !isNaN(v));
+  if (filled.length === 0) return 0;
+  const sum = filled.reduce((a, b) => a + b, 0);
+  const avg20 = sum / filled.length;
+  if (hasExam) return (avg20 / 20) * 24;
+  return (avg20 / 20) * 54;
 };
 const getExamFinal = exam => (exam / 20) * 30;
 const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000)%MATH_QUOTES.length]; };
@@ -128,6 +150,9 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Behind Render / proxies TLS terminates at proxy — needed for Secure cookies
+app.set('trust proxy', 1);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -202,7 +227,11 @@ app.post('/login', h(async (req, res) => {
 
   if (okEmail && okPassword) {
     req.session.isAuthenticated = true;
-    res.json({ success: true });
+    req.session.role = 'teacher';
+    req.session.save(err => {
+      if (err) { console.error('Session save error:', err); return res.status(500).json({ error: 'Session error' }); }
+      res.json({ success: true });
+    });
   } else {
     res.status(401).json({ error: 'Invalid email or password' });
   }
@@ -350,8 +379,24 @@ app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
 }));
 
 // ============ STUDENT PORTAL ============
-app.get(['/portal','/portal/:gradeSlug'], (req, res) => {
+app.get('/portal/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'portal-login.html'));
+});
+app.get('/portal', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+});
+app.get('/portal/:gradeSlug', (req, res) => {
+  const cls = gradeSlugToClass(req.params.gradeSlug);
+  if (!cls) return res.redirect('/portal');
+  // Teacher can view any grade; student must be logged in and match own grade
+  if (req.session.isAuthenticated) return res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+  if (req.session.studentAccountId) {
+    if (req.session.studentClassName !== cls) {
+      return res.redirect(classToPortalPath(req.session.studentClassName));
+    }
+    return res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+  }
+  return res.redirect('/portal/login');
 });
 
 app.get('/download/:id', h(async (req, res) => {
@@ -369,6 +414,8 @@ app.get('/download/:id', h(async (req, res) => {
 const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/content', '/academic-year', '/quote', '/questions']);
 app.use('/api', (req, res, next) => {
   if (req.method === 'GET' && publicApiRoutes.has(req.path)) return next();
+  // Portal students post questions anonymously (legacy) — allow public POST, teacher deletes via auth DELETE
+  if (req.method === 'POST' && req.path === '/questions') return next();
   return isApiAuth(req, res, next);
 });
 
@@ -531,34 +578,32 @@ app.get('/api/grades', h(async (req, res) => {
 }));
 
 app.post('/api/grades', h(async (req, res) => {
-  const { studentId, semester, attendance, bigExam, ds, numDS } = req.body;
+  const { studentId, semester, attendance, bigExam, ds, numDS, hasExam } = req.body;
   const sn = parseInt(semester);
   if (!isValidObjectId(studentId)) return badRequest(res, 'Invalid student id');
   if (!PERIODS.includes(sn)) return badRequest(res, 'Invalid period');
   const student = await Student.findById(studentId);
   if (!student) return badRequest(res, 'Student not found');
   const numDSValue = parseInt(numDS, 10);
-  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 5) return badRequest(res, 'Invalid numDS');
-  const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
+  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 20) return badRequest(res, 'Invalid numDS (1-20)');
+  const dsValues = parseDSArray(ds, numDSValue);
   const exam = parseScore(bigExam, 20);
-  const hasExam = sn !== 3 && sn !== 6;
-  if (sn === 3 || sn === 6) {
-    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+  // Manual checkbox overrides automatic semester rule; fallback preserves old behavior
+  const hasExamValue = (typeof hasExam === 'boolean') ? hasExam : (hasExam === 'true' ? true : hasExam === 'false' ? false : (sn !== 3 && sn !== 6));
+  const att10 = parseAttendance10(attendance);
+  if (!hasExamValue) {
+    const attFinal6 = getAttendanceFinal6(att10);
     const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
     const final60 = attFinal6 + dsAvg54;
     const final20 = final60 / 3;
-    const paddedDS = [];
-    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS || [0, 0, 0], bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { upsert: true, new: true });
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: att10, ds: dsValues, bigExam: 0, rawTotal: final60, final20, final60, numDS: numDSValue, hasExam: false }, { upsert: true, new: true });
   } else {
-    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const attFinal6 = getAttendanceFinal6(att10);
     const dsAvg24 = getDSAverage(dsValues, numDSValue, true);
     const examFinal30 = getExamFinal(exam);
     const final60 = attFinal6 + dsAvg24 + examFinal30;
     const final20 = final60 / 3;
-    const paddedDS = [];
-    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { upsert: true, new: true });
+    await Grade.findOneAndUpdate({ studentId, semester: sn }, { studentId, semester: sn, attendance: att10, ds: dsValues, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue, hasExam: true }, { upsert: true, new: true });
   }
   res.json({ success: true });
 }));
@@ -567,31 +612,28 @@ app.put('/api/grades/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid grade id');
   const existing = await Grade.findById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Grade not found' });
-  const { studentId, semester, attendance, bigExam, ds, numDS } = req.body;
+  const { studentId, semester, attendance, bigExam, ds, numDS, hasExam } = req.body;
   const sn = parseInt(semester);
   if (!PERIODS.includes(sn)) return badRequest(res, 'Invalid period');
   const numDSValue = parseInt(numDS, 10);
-  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 5) return badRequest(res, 'Invalid numDS');
-  const dsValues = Array.isArray(ds) ? ds.map(v => parseScore(v, 20)) : [];
+  if (isNaN(numDSValue) || numDSValue < 1 || numDSValue > 20) return badRequest(res, 'Invalid numDS (1-20)');
+  const dsValues = parseDSArray(ds, numDSValue);
   const exam = parseScore(bigExam, 20);
-  const hasExam = sn !== 3 && sn !== 6;
-  if (sn === 3 || sn === 6) {
-    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+  const hasExamValue = (typeof hasExam === 'boolean') ? hasExam : (hasExam === 'true' ? true : hasExam === 'false' ? false : (existing.hasExam !== undefined ? !!existing.hasExam : (sn !== 3 && sn !== 6)));
+  const att10 = parseAttendance10(attendance);
+  if (!hasExamValue) {
+    const attFinal6 = getAttendanceFinal6(att10);
     const dsAvg54 = getDSAverage(dsValues, numDSValue, false);
     const final60 = attFinal6 + dsAvg54;
     const final20 = final60 / 3;
-    const paddedDS = [];
-    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS || [0, 0, 0], bigExam: 0, rawTotal: final60, final20, final60, numDS: 0 }, { new: true });
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: att10, ds: dsValues, bigExam: 0, rawTotal: final60, final20, final60, numDS: numDSValue, hasExam: false }, { new: true });
   } else {
-    const attFinal6 = getAttendanceFinal6(parseScore(attendance, 10));
+    const attFinal6 = getAttendanceFinal6(att10);
     const dsAvg24 = getDSAverage(dsValues, numDSValue, true);
     const examFinal30 = getExamFinal(exam);
     const final60 = attFinal6 + dsAvg24 + examFinal30;
     const final20 = final60 / 3;
-    const paddedDS = [];
-    for (let i = 0; i < numDSValue; i++) paddedDS.push(dsValues[i] || 0);
-    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: parseScore(attendance, 10), ds: paddedDS, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue }, { new: true });
+    await Grade.findByIdAndUpdate(req.params.id, { studentId, semester: sn, attendance: att10, ds: dsValues, bigExam: exam, rawTotal: final60, final20, final60, numDS: numDSValue, hasExam: true }, { new: true });
   }
   res.json({ success: true });
 }));
@@ -716,6 +758,190 @@ app.get('/api/questions', h(async (req, res) => {
   if (className && isValidClassName(className)) filter.className = className;
   const questions = await Question.find(filter).sort({ createdAt: -1 }).limit(100);
   res.json(questions);
+}));
+
+// Teacher moderation: delete any question (teacher auth required via /api middleware for DELETE)
+app.delete('/api/questions/:id', h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid question id');
+  await Question.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+}));
+
+// Teacher reply to a question (stored as answer, shown in portal)
+app.put('/api/questions/:id/answer', h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid question id');
+  const answer = cleanText(req.body.answer);
+  const q = await Question.findByIdAndUpdate(req.params.id, { answer }, { new: true });
+  if (!q) return res.status(404).json({ error: 'Question not found' });
+  res.json(q);
+}));
+
+// ============ STUDENT DS-ONLY VIEW (yearly, progressive) ============
+// Returns only DS grades for one student: DS1..DSN (/20), no Att/Exam/Final.
+// Query: ?studentId=... (teacher) — portal student session version added with accounts phase.
+const DS_QUOTA = { 'Grade 7': 13, 'Grade 8': 19, 'Grade 9': 10 };
+app.get('/api/student-ds', h(async (req, res) => {
+  const { studentId } = req.query;
+  if (!isValidObjectId(studentId)) return badRequest(res, 'Invalid student id');
+  const student = await Student.findById(studentId);
+  if (!student) return badRequest(res, 'Student not found');
+  const quota = DS_QUOTA[student.className] || 20;
+  // Use semester 1 record as yearly DS container (Option A: single list per year, filled over time)
+  let grade = await Grade.findOne({ studentId: student._id, semester: 1 });
+  if (!grade) grade = { ds: [], numDS: quota };
+  const ds = [];
+  for (let i = 0; i < quota; i++) {
+    const v = grade.ds ? grade.ds[i] : undefined;
+    ds.push(typeof v === 'number' && !isNaN(v) ? v : null);
+  }
+  res.json({ student: { _id: student._id, name: student.name, className: student.className }, quota, ds, numDS: quota });
+}));
+
+// ============ STUDENT ACCOUNTS (username+password, bulk from teacher-provided names) ============
+const slugifyName = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'student';
+const classPrefix = c => c === 'Grade 7' ? 'eb7' : c === 'Grade 8' ? 'eb8' : 'eb9';
+const randomPassword = () => crypto.randomBytes(5).toString('base64').replace(/[^A-Za-z0-9]/g, 'X').slice(0, 8);
+
+const isTeacher = (req, res, next) => req.session.isAuthenticated && req.session.role !== 'student' ? next() : res.status(401).json({ error: 'Teacher authentication required' });
+const isStudentSession = (req, res, next) => req.session.studentAccountId ? next() : res.status(401).json({ error: 'Student login required' });
+
+// Teacher: bulk generate from names list [{name, className}] — returns one-time passwords for paper handout
+app.post('/api/student-accounts/generate-list', isApiAuth, h(async (req, res) => {
+  const items = Array.isArray(req.body.items) ? req.body.items : [];
+  if (items.length === 0 || items.length > 200) return badRequest(res, 'Provide 1-200 names');
+  const results = [];
+  for (const it of items) {
+    const name = cleanText(it.name);
+    const className = cleanText(it.className);
+    if (!name || !isValidClassName(className)) continue;
+    let student = await Student.findOne({ name, className });
+    if (!student) student = await Student.create({ name, className, academicYear: getCurrentAcademicYear() });
+    let existing = await StudentAccount.findOne({ studentId: student._id });
+    if (existing) { results.push({ name, username: existing.username, password: null, note: 'already exists' }); continue; }
+    let base = `${classPrefix(className)}-${slugifyName(name)}`;
+    let username = base, n = 2;
+    while (await StudentAccount.findOne({ username })) username = `${base}-${n++}`;
+    const password = randomPassword();
+    const passwordHash = await bcrypt.hash(password, 10);
+    await StudentAccount.create({ username, passwordHash, studentId: student._id, className });
+    results.push({ name, username, password, className });
+  }
+  res.json({ accounts: results });
+}));
+
+app.post('/api/student-accounts/reset', isApiAuth, h(async (req, res) => {
+  const { username } = req.body;
+  const acc = await StudentAccount.findOne({ username: (username || '').toLowerCase() });
+  if (!acc) return res.status(404).json({ error: 'Account not found' });
+  const password = randomPassword();
+  acc.passwordHash = await bcrypt.hash(password, 10);
+  await acc.save();
+  res.json({ username: acc.username, password });
+}));
+
+app.get('/api/student-accounts', isApiAuth, h(async (req, res) => {
+  const accs = await StudentAccount.find().sort({ className: 1, username: 1 }).limit(500);
+  res.json(accs.map(a => ({ username: a.username, className: a.className, studentId: a.studentId })));
+}));
+
+// Student portal login (username+password, no forced change)
+app.post('/portal/login', h(async (req, res) => {
+  const username = (req.body.username || '').toLowerCase().trim();
+  const acc = await StudentAccount.findOne({ username });
+  if (!acc) return res.status(401).json({ error: 'Invalid username or password' });
+  const ok = await bcrypt.compare(req.body.password || '', acc.passwordHash);
+  if (!ok) return res.status(401).json({ error: 'Invalid username or password' });
+  req.session.studentAccountId = acc._id.toString();
+  req.session.studentClassName = acc.className;
+  req.session.studentName = (await Student.findById(acc.studentId))?.name || acc.username;
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Session error' });
+    res.json({ success: true, className: acc.className });
+  });
+}));
+
+app.get('/api/portal/me', h(async (req, res) => {
+  if (!req.session.studentAccountId) return res.json({ loggedIn: false });
+  res.json({ loggedIn: true, className: req.session.studentClassName, name: req.session.studentName });
+}));
+
+app.get('/portal/logout', (req, res) => {
+  req.session.studentAccountId = null;
+  res.redirect('/portal');
+});
+
+// Student self DS (session-based, DS-only, yearly quota, progressive — for waiting)
+app.get('/api/portal/my-ds', h(async (req, res) => {
+  if (!req.session.studentAccountId) return res.status(401).json({ error: 'Student login required' });
+  const acc = await StudentAccount.findById(req.session.studentAccountId);
+  if (!acc) return res.status(401).json({ error: 'Student login required' });
+  const student = await Student.findById(acc.studentId);
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+  const quota = DS_QUOTA[student.className] || 20;
+  let grade = await Grade.findOne({ studentId: student._id, semester: 1 });
+  if (!grade) grade = { ds: [] };
+  const ds = [];
+  for (let i = 0; i < quota; i++) {
+    const v = grade.ds ? grade.ds[i] : undefined;
+    ds.push(typeof v === 'number' && !isNaN(v) ? v : null);
+  }
+  res.json({ student: { name: student.name, className: student.className }, quota, ds });
+}));
+
+// ============ PRIVATE 1-1 CHAT (one thread per student, visible by default, only own) ============
+// Student: get own thread (auto-create on first message)
+app.get('/api/portal/my-thread', h(async (req, res) => {
+  if (!req.session.studentAccountId) return res.status(401).json({ error: 'Student login required' });
+  let thread = await Thread.findOne({ studentAccountId: req.session.studentAccountId });
+  if (!thread) return res.json({ thread: null });
+  if (thread.isHiddenByTeacher) return res.json({ thread: null, hidden: true });
+  res.json({ thread });
+}));
+
+app.post('/api/portal/my-thread/message', h(async (req, res) => {
+  if (!req.session.studentAccountId) return res.status(401).json({ error: 'Student login required' });
+  const text = cleanText(req.body.text);
+  if (!text) return badRequest(res, 'Message is required');
+  let thread = await Thread.findOne({ studentAccountId: req.session.studentAccountId });
+  if (!thread) {
+    thread = await Thread.create({ className: req.session.studentClassName, studentAccountId: req.session.studentAccountId, studentName: req.session.studentName, messages: [] });
+  }
+  thread.messages.push({ senderRole: 'student', senderName: req.session.studentName, text });
+  thread.updatedAt = new Date();
+  await thread.save();
+  res.json({ success: true });
+}));
+
+// Teacher: list threads, reply, hide/unhide, delete message/thread
+app.get('/api/threads', isApiAuth, h(async (req, res) => {
+  const { className } = req.query;
+  const filter = {};
+  if (className && isValidClassName(className)) filter.className = className;
+  res.json(await Thread.find(filter).sort({ updatedAt: -1 }).limit(200));
+}));
+
+app.post('/api/threads/:id/reply', isApiAuth, h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid thread id');
+  const text = cleanText(req.body.text);
+  if (!text) return badRequest(res, 'Message is required');
+  const thread = await Thread.findById(req.params.id);
+  if (!thread) return res.status(404).json({ error: 'Thread not found' });
+  thread.messages.push({ senderRole: 'teacher', senderName: 'Teacher', text });
+  thread.updatedAt = new Date();
+  await thread.save();
+  res.json({ success: true });
+}));
+
+app.put('/api/threads/:id/hide', isApiAuth, h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid thread id');
+  const thread = await Thread.findByIdAndUpdate(req.params.id, { isHiddenByTeacher: !!req.body.hidden }, { new: true });
+  res.json(thread);
+}));
+
+app.delete('/api/threads/:id', isApiAuth, h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid thread id');
+  await Thread.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
 }));
 
 // Analytics
