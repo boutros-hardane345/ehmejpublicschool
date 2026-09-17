@@ -125,6 +125,8 @@ function hasFinal20(g) {
   return g && typeof g.final20 === 'number' && (g.final20 !== 0 || !g.final60 || g.rawTotal <= 20);
 }
 
+function hasGrade20(g) { return hasFinal20(g); }
+
 function final20(g) {
   return hasFinal20(g) ? g.final20 : ((g.final60 || 0) / 3);
 }
