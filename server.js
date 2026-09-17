@@ -389,7 +389,11 @@ app.get('/portal/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 app.get('/portal', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'portal.html'));
+  if (req.session.isAuthenticated) return res.redirect('/teacher/dashboard');
+  if (req.session.studentAccountId && req.session.studentClassName) {
+    return res.redirect(classToPortalPath(req.session.studentClassName));
+  }
+  return res.redirect('/login');
 });
 app.get('/portal/:gradeSlug', (req, res) => {
   const cls = gradeSlugToClass(req.params.gradeSlug);

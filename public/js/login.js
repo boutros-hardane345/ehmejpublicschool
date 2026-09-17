@@ -1,15 +1,20 @@
+function resetLoginInputs() {
+  const identEl = document.getElementById('identifier');
+  const passEl = document.getElementById('password');
+  const errEl = document.getElementById('loginError');
+  if (identEl) identEl.value = '';
+  if (passEl) passEl.value = '';
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  resetLoginInputs();
   // Auto-forward already logged users: teacher → dashboard, student → own portal
   fetch('/api/portal/me').then(r => r.json()).then(me => {
     if (!me || !me.loggedIn) return;
     if (me.role === 'teacher') window.location.href = '/teacher/dashboard';
     else if (me.role === 'student' && me.className) window.location.href = '/portal/' + me.className.toLowerCase().replace(' ', '-');
   }).catch(() => {});
-
-  const showBox = document.getElementById('showPass');
-  if (showBox) showBox.addEventListener('change', function () {
-    document.getElementById('password').type = showBox.checked ? 'text' : 'password';
-  });
 
   const errEl = document.getElementById('loginError');
   const form = document.getElementById('loginForm');
@@ -33,12 +38,14 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok) {
+        resetLoginInputs();
         if (data.role === 'teacher') window.location.href = '/teacher/dashboard';
         else if (data.role === 'student' && data.className) window.location.href = '/portal/' + data.className.toLowerCase().replace(' ', '-');
         else window.location.href = '/portal';
       } else {
         errEl.textContent = data.error || 'Invalid login';
         errEl.style.display = 'block';
+        document.getElementById('password').value = '';
       }
     } catch (err) {
       errEl.textContent = 'Connection error';
@@ -48,3 +55,5 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.textContent = 'Sign In';
   });
 });
+
+window.addEventListener('pageshow', resetLoginInputs);

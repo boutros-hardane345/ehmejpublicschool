@@ -13,14 +13,7 @@ function loadQuote() {
 }
 
 function renderDirectory() {
-  document.getElementById('portalSubtitle').textContent = 'Select Your Class';
-  document.getElementById('portalContent').innerHTML =
-    '<div class="portal-directory">' +
-    CLASSES.map(c =>
-      '<a href="/portal/' + c.toLowerCase().replace(' ', '-') + '">' + c + '</a>'
-    ).join('') +
-    '</div><p class="text-muted" style="text-align:center;margin-top:1rem"><a href="/login">School login</a></p>';
-  document.getElementById('footerClassCode').textContent = '—';
+  window.location.href = '/login';
 }
 
 function apiErrorMessage(e, fallback) {
