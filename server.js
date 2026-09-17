@@ -212,7 +212,7 @@ const h = fn => (req, res, next) => fn(req, res, next).catch(err => { console.er
 
 // ============ ROUTES ============
 
-// Login
+// Unified login — one page for two roles (teacher email / student username)
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
@@ -228,12 +228,16 @@ app.post('/login', h(async (req, res) => {
   if (okEmail && okPassword) {
     req.session.isAuthenticated = true;
     req.session.role = 'teacher';
+    // Clear any student identity so roles never mix in one cookie
+    req.session.studentAccountId = null;
+    req.session.studentClassName = null;
+    req.session.studentName = null;
     req.session.save(err => {
       if (err) { console.error('Session save error:', err); return res.status(500).json({ error: 'Session error' }); }
-      res.json({ success: true });
+      res.json({ success: true, role: 'teacher' });
     });
   } else {
-    res.status(401).json({ error: 'Invalid email or password' });
+    res.status(401).json({ error: 'Invalid login' });
   }
 }));
 
@@ -252,7 +256,8 @@ const teacherPages = {
   '/teacher/content': 'teacher/content.html',
   '/teacher/grades': 'teacher/grades.html',
   '/teacher/year-results': 'teacher/year-results.html',
-  '/teacher/productivity': 'teacher/productivity.html'
+  '/teacher/productivity': 'teacher/productivity.html',
+  '/teacher/logins': 'teacher/logins.html'
 };
 
 Object.entries(teacherPages).forEach(([route, file]) => {
@@ -379,8 +384,9 @@ app.get('/teacher/export-semester-pdf', isAuth, h(async (req, res) => {
 }));
 
 // ============ STUDENT PORTAL ============
+// Alias: unified login page serves both roles; old student URL kept working
 app.get('/portal/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'portal-login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 app.get('/portal', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'portal.html'));
@@ -882,7 +888,9 @@ app.post('/api/student-accounts/reset', isApiAuth, h(async (req, res) => {
 }));
 
 app.get('/api/student-accounts', isApiAuth, h(async (req, res) => {
-  const accs = await StudentAccount.find().sort({ className: 1, username: 1 }).limit(500);
+  const filter = {};
+  if (req.query.className && isValidClassName(req.query.className)) filter.className = req.query.className;
+  const accs = await StudentAccount.find(filter).sort({ className: 1, username: 1 }).limit(500);
   res.json(accs.map(a => ({ username: a.username, className: a.className, studentId: a.studentId })));
 }));
 
@@ -902,14 +910,53 @@ app.post('/portal/login', h(async (req, res) => {
   });
 }));
 
+// Unified login helper: identifier with @ → teacher, else student username
+app.post('/api/login', h(async (req, res) => {
+  const identifier = (req.body.identifier || '').trim();
+  const password = req.body.password || '';
+  if (identifier.includes('@')) {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const okEmail = identifier.toLowerCase() === adminEmail.toLowerCase();
+    const okPassword = process.env.ADMIN_PASSWORD_HASH
+      ? await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH)
+      : password === process.env.ADMIN_PASSWORD;
+    if (!okEmail || !okPassword) return res.status(401).json({ error: 'Invalid login' });
+    req.session.isAuthenticated = true;
+    req.session.role = 'teacher';
+    req.session.studentAccountId = null;
+    req.session.studentClassName = null;
+    req.session.studentName = null;
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'Session error' });
+      res.json({ success: true, role: 'teacher' });
+    });
+  } else {
+    const username = identifier.toLowerCase();
+    const acc = await StudentAccount.findOne({ username });
+    if (!acc) return res.status(401).json({ error: 'Invalid login' });
+    const ok = await bcrypt.compare(password, acc.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Invalid login' });
+    req.session.studentAccountId = acc._id.toString();
+    req.session.studentClassName = acc.className;
+    req.session.studentName = (await Student.findById(acc.studentId))?.name || acc.username;
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'Session error' });
+      res.json({ success: true, role: 'student', className: acc.className });
+    });
+  }
+}));
+
 app.get('/api/portal/me', h(async (req, res) => {
-  if (!req.session.studentAccountId) return res.json({ loggedIn: false });
-  res.json({ loggedIn: true, className: req.session.studentClassName, name: req.session.studentName });
+  if (req.session.isAuthenticated) return res.json({ loggedIn: true, role: 'teacher' });
+  if (req.session.studentAccountId) return res.json({ loggedIn: true, role: 'student', className: req.session.studentClassName, name: req.session.studentName });
+  res.json({ loggedIn: false, role: null });
 }));
 
 app.get('/portal/logout', (req, res) => {
   req.session.studentAccountId = null;
-  res.redirect('/portal');
+  req.session.studentClassName = null;
+  req.session.studentName = null;
+  req.session.save(() => res.redirect('/login'));
 });
 
 // Student self DS (session-based, DS-only, yearly quota, progressive — for waiting)
