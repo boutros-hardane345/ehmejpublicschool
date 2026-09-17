@@ -56,76 +56,12 @@ async function loadDashboard() {
   } catch (err) {
     document.getElementById('avgTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading data.</td></tr>';
   }
-
-  loadQuestions();
-}
-
-async function loadQuestions() {
-  try {
-    const questions = await API.get('/api/questions');
-    const feed = document.getElementById('questionsFeed');
-    if (!questions || questions.length === 0) {
-      feed.innerHTML = '<p class="empty-state">No questions yet.</p>';
-      return;
-    }
-    feed.innerHTML = questions.map(q =>
-      '<div class="feed-item">' +
-      '<div class="feed-meta"><span class="badge badge-neutral">' + escapeHtml(q.className) + '</span><span>' + formatDate(q.createdAt) + '</span></div>' +
-      '<h4>' + escapeHtml(q.studentName) + '</h4>' +
-      '<p>' + escapeHtml(q.question) + '</p>' +
-      (q.answer ? '<p style="margin-top:.4rem;border-left:3px solid var(--border);padding-left:.6rem"><strong>Reply:</strong> ' + escapeHtml(q.answer) + '</p>' : '') +
-      '<div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">' +
-      '<input type="text" placeholder="Write reply..." id="ans_' + q._id + '" value="' + escapeHtml(q.answer || '') + '" style="flex:1;min-width:140px;padding:.4rem .6rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)">' +
-      '<button class="btn btn-secondary btn-sm" onclick="answerQuestion(\'' + q._id + '\')">Reply</button>' +
-      '<button class="btn btn-secondary btn-sm" onclick="deleteQuestion(\'' + q._id + '\')">Delete</button>' +
-      '</div>' +
-      '</div>'
-    ).join('');
-  } catch (e) {
-    document.getElementById('questionsFeed').innerHTML = '<p class="empty-state">Could not load questions.</p>';
-  }
-}
-
-async function deleteQuestion(id) {
-  if (!confirm('Delete this question?')) return;
-  await API.del('/api/questions/' + id);
-  loadQuestions();
-}
-
-async function answerQuestion(id) {
-  const el = document.getElementById('ans_' + id);
-  const answer = el ? el.value : '';
-  await API.put('/api/questions/' + id + '/answer', { answer });
-  showToast('Reply saved', 'success');
-  loadQuestions();
-}
-
-function submitTeacherQuestion() {
-  const studentName = document.getElementById('teacherStudentName').value.trim();
-  const className = document.getElementById('teacherClassName').value.trim();
-  const question = document.getElementById('teacherQuestionInput').value.trim();
-  if (!studentName) return showToast('Student name is required', 'error');
-  if (!isValidClassName(className)) return showToast('Valid class is required', 'error');
-  if (!question) return showToast('Question is required', 'error');
-  API.post('/api/questions', { studentName, className, question }).then(function () {
-    document.getElementById('teacherStudentName').value = '';
-    document.getElementById('teacherClassName').value = '';
-    document.getElementById('teacherQuestionInput').value = '';
-    showToast('Question submitted', 'success');
-    loadQuestions();
-  }).catch(function () {
-    showToast('Error submitting question', 'error');
-  });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  var submitBtn = document.getElementById('submitTeacherQuestion');
-  if (submitBtn) submitBtn.addEventListener('click', submitTeacherQuestion);
   loadQuote();
   loadDashboard();
 });
-
-function isValidClassName(c) { return ['Grade 7', 'Grade 8', 'Grade 9'].includes(c); }
 
 function showToast(msg, type) {
   let t = document.getElementById('toast');

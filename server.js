@@ -20,7 +20,6 @@ const Grade = require('./models/Grade');
 const Lesson = require('./models/Lesson');
 const Schedule = require('./models/Schedule');
 const Todo = require('./models/Todo');
-const Question = require('./models/Question');
 const StudentAccount = require('./models/StudentAccount');
 const Thread = require('./models/Thread');
 
@@ -257,7 +256,8 @@ const teacherPages = {
   '/teacher/grades': 'teacher/grades.html',
   '/teacher/year-results': 'teacher/year-results.html',
   '/teacher/productivity': 'teacher/productivity.html',
-  '/teacher/logins': 'teacher/logins.html'
+  '/teacher/logins': 'teacher/logins.html',
+  '/teacher/chats': 'teacher/chats.html'
 };
 
 Object.entries(teacherPages).forEach(([route, file]) => {
@@ -418,7 +418,7 @@ app.get('/download/:id', h(async (req, res) => {
 // ============ TEACHER DASHBOARD API ============
 
 const publicApiRoutes = new Set(['/classes', '/period-labels', '/periods', '/academic-year', '/quote']);
-// /api/content and /api/questions with className now require login (teacher any grade, student only own).
+// /api/content with className requires login (teacher any grade, student only own).
 // This stops anonymous portal views of questions/announcements even via /portal?class= bypass.
 const isTeacherSession = req => !!req.session.isAuthenticated;
 const hasStudentSession = req => !!req.session.studentAccountId;
@@ -436,25 +436,7 @@ app.use('/api', (req, res, next) => {
     }
     return res.status(401).json({ error: 'Student login required' });
   }
-  if (req.path === '/questions') {
-    if (isTeacherSession(req)) return next();
-    if (hasStudentSession(req)) {
-      if (req.method === 'POST') {
-        // Force identity to session, ignore client className spoof
-        req.body.studentName = req.session.studentName;
-        req.body.className = req.session.studentClassName;
-        return next();
-      }
-      if (req.method === 'GET') {
-        if (req.query.className && req.query.className !== req.session.studentClassName) {
-          return res.status(403).json({ error: 'Restricted to your own grade' });
-        }
-        return next();
-      }
-    }
-    return res.status(401).json({ error: 'Login required' });
-  }
-  if (req.path === '/portal/my-ds' || req.path === '/portal/my-thread/message') return next();
+  if (req.path === '/portal/my-ds' || req.path === '/portal/my-thread' || req.path === '/portal/my-thread/message') return next();
   return isApiAuth(req, res, next);
 });
 
@@ -777,42 +759,6 @@ app.delete('/api/todos/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid todo id');
   await Todo.findByIdAndDelete(req.params.id);
   res.json({ success: true });
-}));
-
-// Questions
-app.post('/api/questions', h(async (req, res) => {
-  const studentName = cleanText(req.body.studentName);
-  const className = cleanText(req.body.className);
-  const question = cleanText(req.body.question);
-  if (!studentName) return badRequest(res, 'Student name is required');
-  if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (!question) return badRequest(res, 'Question is required');
-  const q = await Question.create({ studentName, className, question });
-  res.json(q);
-}));
-
-app.get('/api/questions', h(async (req, res) => {
-  const { className } = req.query;
-  const filter = {};
-  if (className && isValidClassName(className)) filter.className = className;
-  const questions = await Question.find(filter).sort({ createdAt: -1 }).limit(100);
-  res.json(questions);
-}));
-
-// Teacher moderation: delete any question (teacher auth required via /api middleware for DELETE)
-app.delete('/api/questions/:id', h(async (req, res) => {
-  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid question id');
-  await Question.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
-}));
-
-// Teacher reply to a question (stored as answer, shown in portal)
-app.put('/api/questions/:id/answer', h(async (req, res) => {
-  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid question id');
-  const answer = cleanText(req.body.answer);
-  const q = await Question.findByIdAndUpdate(req.params.id, { answer }, { new: true });
-  if (!q) return res.status(404).json({ error: 'Question not found' });
-  res.json(q);
 }));
 
 // ============ STUDENT DS-ONLY VIEW (yearly, progressive) ============

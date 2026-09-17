@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chats — Math Teacher Dashboard</title>
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-season',['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][new Date().getMonth()])</script>
+</head>
+<body>
+<div class="sidebar-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <h1>Math Teacher Dashboard</h1>
+      <small>Single-teacher classroom platform</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/teacher/dashboard" style="--i:1">Dashboard</a>
+      <a href="/teacher/students" style="--i:2">Students</a>
+      <a href="/teacher/content" style="--i:3">Content</a>
+      <a href="/teacher/grades" style="--i:4">Grades</a>
+      <a href="/teacher/year-results" style="--i:5">Year Results</a>
+      <a href="/teacher/productivity" style="--i:6">Productivity</a>
+      <a href="/teacher/logins" style="--i:7">Logins</a>
+      <a href="/teacher/chats" class="active" style="--i:8">Chats</a>
+      <a href="/logout" class="logout" style="--i:9">Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <em id="sideQuote">Loading...</em>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+
+  <main class="main-content">
+    <div class="container stagger">
+      <div class="page-header">
+        <p class="eyebrow">Private Messages</p>
+        <h1>Student Chats</h1>
+        <p>One private 1-to-1 thread per student. Unread highlights threads updated since you last opened them.</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label for="ccf">Class</label>
+          <select id="ccf"><option value="all">All Classes</option></select>
+        </div>
+        <div class="filter-group" style="flex:2">
+          <label for="csearch">Search</label>
+          <input type="text" id="csearch" placeholder="Search student name...">
+        </div>
+        <div class="filter-group" style="align-self:end">
+          <label style="display:flex;gap:.4rem;align-items:center"><input type="checkbox" id="unreadOnly" style="width:auto"> Unread only</label>
+        </div>
+        <button class="btn btn-secondary" id="chatRefreshBtn">Refresh</button>
+      </div>
+
+      <div class="split-layout">
+        <div class="card">
+          <h2>Threads</h2>
+          <p id="threadCount">0 threads</p>
+          <div id="threadList" class="content-feed"></div>
+        </div>
+        <div class="card">
+          <h2 id="openThreadTitle">Select a thread</h2>
+          <div id="openThread" class="content-feed"><p class="empty-state">Choose a student on the left.</p></div>
+          <div id="replyBox" style="display:none;margin-top:.75rem">
+            <div style="display:flex;gap:.5rem">
+              <input type="text" id="replyInput" placeholder="Write a reply..." style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)">
+              <button class="btn btn-primary btn-sm" id="replyBtn">Send</button>
+            </div>
+            <div style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" id="hideBtn">Hide from student</button>
+              <button class="btn btn-danger btn-sm" id="delThreadBtn">Delete thread</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/teacher-chats.js"></script>
+</body>
+</html>
