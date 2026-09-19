@@ -95,6 +95,8 @@ async function loadGrades() {
   const sem = document.getElementById('gpf').value || 'all';
   const params = new URLSearchParams({ className: cls, academicYear: yr });
   if (sem !== 'all') params.set('semester', sem);
+  document.getElementById('gradesTableBody').innerHTML =
+    '<tr><td colspan="30"><div class="skel"></div><div class="skel"></div><div class="skel"></div></td></tr>';
   try {
     const data = await API.get('/api/grades?' + params.toString());
     syncAcademicYears(data.academicYears, yr);
@@ -129,6 +131,19 @@ function hasGrade20(g) { return hasFinal20(g); }
 
 function final20(g) {
   return hasFinal20(g) ? g.final20 : ((g.final60 || 0) / 3);
+}
+
+function final60(g) {
+  if (!g) return 0;
+  if (typeof g.final60 === 'number' && g.final60 > 0) return g.final60;
+  if (g.rawTotal) return g.rawTotal;
+  return final20(g) * 3;
+}
+
+function final60Class(v) {
+  if (v >= 30) return 'text-pass';
+  if (v >= 24) return 'text-border';
+  return 'text-fail';
 }
 
 function getAttendanceDisplay20(g) {
@@ -173,10 +188,15 @@ function renderGradesTable(data, semester) {
     for (let i = 1; i <= maxDS; i++) dsHeads += '<th>DS' + i + ' /20</th>';
     thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Exam?</th>' + dsHeads + '<th>Exam /20</th><th>Final /20</th><th>Actions</th></tr>';
   } else {
-    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Exam?</th><th>Att /20</th><th>DS avg /20</th><th>Exam /20</th><th>Final /20</th><th>Actions</th></tr>';
+    thead.innerHTML = '<tr><th>Student</th><th>Class</th><th>Year</th><th>Period</th><th>Exam?</th><th>Att /20</th><th>DS avg /20</th><th>Exam /20</th><th>Final /60</th><th>Actions</th></tr>';
   }
 
   const tbody = document.getElementById('gradesTableBody');
+  const bulkBtn = document.getElementById('deleteShownGrades');
+  if (bulkBtn) {
+    bulkBtn.style.display = grades.length ? '' : 'none';
+    bulkBtn.textContent = 'Delete shown (' + grades.length + ')';
+  }
   if (grades.length === 0) {
     tbody.innerHTML = '<tr><td colspan="30" class="text-center text-muted">No grades saved for this view.</td></tr>';
     return;
@@ -191,6 +211,8 @@ function renderGradesTable(data, semester) {
       const cn = '<span class="badge badge-neutral">' + escapeHtml(s.className) + '</span>';
       const period = periodLabels[g.semester] || 'S' + g.semester;
       const editBtn = '<button class="btn btn-secondary btn-sm" onclick="editGrade(\'' + g._id + '\')">Edit</button>';
+      const delBtn = '<button class="btn btn-danger btn-sm" onclick="deleteGrade(\'' + g._id + '\')">Delete</button>';
+      const actions = '<div class="row-actions">' + editBtn + delBtn + '</div>';
       const examBadge = hasExamFor(g) ? '<span class="badge badge-neutral">Exam</span>' : '<span class="badge">No exam</span>';
       if (showExplicitDS) {
         const n = maxDS;
@@ -201,14 +223,14 @@ function renderGradesTable(data, semester) {
           dsCells += '<td>' + ((v === null || v === undefined || isNaN(v)) ? '<span class="text-muted">—</span>' : Number(v).toFixed(1)) + '</td>';
         }
         const exam20 = hasExamFor(g) ? getExamDisplay20(g) : null;
-        const fin20 = final20(g);
-        return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td>' + dsCells + '<td>' + (exam20 === null ? '<span class="text-muted">—</span>' : exam20.toFixed(1)) + '</td><td><strong>' + fin20.toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
+        const fin60 = final60(g);
+        return '<tr class="row-in"><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td>' + dsCells + '<td>' + (exam20 === null ? '<span class="text-muted">—</span>' : exam20.toFixed(1)) + '</td><td><strong class="' + final60Class(fin60) + '">' + fin60.toFixed(1) + ' /60</strong></td><td>' + actions + '</td></tr>';
       }
       const att20 = getAttendanceDisplay20(g);
       const ds20 = getDSDisplay20(g);
       const exam20 = getExamDisplay20(g);
-      const fin20 = final20(g);
-      return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td><td>' + att20.toFixed(1) + '</td><td>' + ds20.toFixed(1) + '</td><td>' + exam20.toFixed(1) + '</td><td><strong>' + fin20.toFixed(1) + '</strong></td><td>' + editBtn + '</td></tr>';
+      const fin60 = final60(g);
+      return '<tr class="row-in"><td>' + escapeHtml(s.name) + '</td><td>' + cn + '</td><td>' + (s.academicYear || 'Not set') + '</td><td>' + period + '</td><td>' + examBadge + '</td><td>' + att20.toFixed(1) + '</td><td>' + ds20.toFixed(1) + '</td><td>' + exam20.toFixed(1) + '</td><td><strong class="' + final60Class(fin60) + '">' + fin60.toFixed(1) + ' /60</strong></td><td>' + actions + '</td></tr>';
     });
   tbody.innerHTML = rows.join('');
 }
@@ -316,7 +338,40 @@ document.getElementById('gradeForm').addEventListener('submit', async function (
   btn.textContent = original;
 });
 
+window.deleteGrade = async function (id) {
+  const row = (document.querySelector('#gradesTableBody') || {}).textContent || '';
+  if (!confirm('Delete this entered grade? This cannot be undone.')) return;
+  try {
+    await API.del('/api/grades/' + id);
+    showToast('Grade deleted', 'success');
+    loadGrades();
+  } catch (e) {
+    console.error(e);
+    showToast('Error deleting grade', 'error');
+  }
+};
+
 document.getElementById('gradeFilterBtn').addEventListener('click', loadGrades);
+
+const bulkBtn = document.getElementById('deleteShownGrades');
+if (bulkBtn) {
+  bulkBtn.addEventListener('click', async function () {
+    const cls = document.getElementById('gcf').value || 'all';
+    const yr = document.getElementById('gyf').value || 'all';
+    const sem = document.getElementById('gpf').value || 'all';
+    const label = document.getElementById('gradeTableLabel').textContent;
+    if (!confirm('Delete ALL grades in "' + label + '"? This cannot be undone.')) return;
+    const params = new URLSearchParams({ className: cls, academicYear: yr, semester: sem });
+    try {
+      const res = await API.del('/api/grades?' + params.toString());
+      showToast('Deleted ' + (res.deletedCount || 0) + ' grade(s)', 'success');
+      loadGrades();
+    } catch (e) {
+      console.error(e);
+      showToast('Error deleting grades', 'error');
+    }
+  });
+}
 
 document.getElementById('gpf').addEventListener('change', function () {
   if (this.value !== 'all') {

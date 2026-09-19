@@ -665,6 +665,28 @@ app.put('/api/grades/:id', h(async (req, res) => {
   res.json({ success: true });
 }));
 
+app.delete('/api/grades/:id', h(async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid grade id');
+  const deleted = await Grade.findByIdAndDelete(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Grade not found' });
+  res.json({ success: true });
+}));
+
+app.delete('/api/grades', h(async (req, res) => {
+  const { className, academicYear, semester } = req.query;
+  if (className && className !== 'all' && !isValidClassName(className)) return badRequest(res, 'Invalid class');
+  if (academicYear && academicYear !== 'all' && !isValidAcademicYear(academicYear)) return badRequest(res, 'Invalid academic year');
+  let semFilter = {};
+  if (semester && semester !== 'all') {
+    const sn = parseInt(semester, 10);
+    if (!PERIODS.includes(sn)) return badRequest(res, 'Invalid period');
+    semFilter = { semester: sn };
+  }
+  const students = await Student.find(getStudentFilter({ className, academicYear })).select('_id');
+  const result = await Grade.deleteMany({ studentId: { $in: students.map(s => s._id) }, ...semFilter });
+  res.json({ success: true, deletedCount: result.deletedCount || 0 });
+}));
+
 // ============ DS GRADES SECTION (independent portal-display store, NOT linked to Grades) ============
 // Teacher enters DS one by one here for portal display; Grades section is re-entered
 // separately per semester for Final/60. No shared reads or writes between them.

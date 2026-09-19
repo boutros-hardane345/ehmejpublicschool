@@ -307,3 +307,72 @@ tr:focus-within td{background:rgba(196,149,106,0.06)}
   .card{padding:1rem}
   .content-feed{grid-template-columns:1fr}
 }
+
+/* ====== DYNAMIC UPGRADE: motion + life ====== */
+@keyframes rowIn{from{opacity:0;transform:translateY(10px) scale(0.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes popIn{0%{opacity:0;transform:scale(0.96)}100%{opacity:1;transform:scale(1)}}
+@keyframes gradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 0 var(--accent-glow)}50%{box-shadow:0 0 0 6px transparent}}
+@keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+
+.card-head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:0.5rem}
+.card-head-row p{margin:0}
+.table-toolbar{display:flex;flex-wrap:wrap;gap:0.75rem;align-items:end;margin:0.75rem 0 0.25rem}
+.table-toolbar .grow{flex:1;min-width:200px}
+.table-toolbar .filter-group{display:flex;flex-direction:column;min-width:140px}
+.hint{font-size:0.78rem;color:var(--text-muted);margin:0.35rem 0 0}
+.row-actions{display:flex;gap:0.4rem;flex-wrap:wrap}
+
+th.th-sort{cursor:pointer;user-select:none;white-space:nowrap;transition:color var(--transition),background var(--transition)}
+th.th-sort:hover{color:var(--accent)}
+th.th-sort.sorted{color:var(--accent)}
+.sort-arrow{font-size:0.7rem}
+
+tbody .row-in{animation:rowIn 0.35s ease both}
+tbody .row-in:nth-child(2){animation-delay:0.03s}
+tbody .row-in:nth-child(3){animation-delay:0.06s}
+tbody .row-in:nth-child(4){animation-delay:0.09s}
+tbody .row-in:nth-child(5){animation-delay:0.12s}
+tbody .row-in:nth-child(n+6){animation-delay:0.15s}
+tbody tr{position:relative}
+tbody tr:hover td{background:linear-gradient(90deg,rgba(37,99,235,0.07),rgba(37,99,235,0.02));}
+tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+
+.skel{height:14px;border-radius:6px;margin:0.5rem 0;background:linear-gradient(90deg,var(--border) 25%,var(--accent-light) 50%,var(--border) 75%);background-size:200% 100%;animation:shimmer 1.2s linear infinite}
+.skel:nth-child(2){width:82%}
+.skel:nth-child(3){width:64%}
+
+.btn{position:relative;overflow:hidden}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.35) 50%,transparent 70%);transform:translateX(-120%);transition:transform 0.6s ease;pointer-events:none}
+.btn:hover::after{transform:translateX(120%)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#b91c1c;box-shadow:0 4px 14px rgba(220,38,38,0.3)}
+.btn:active{transform:scale(0.97)}
+#deleteShownGrades{animation:popIn 0.3s ease}
+
+.stat-card .value{transition:transform var(--transition)}
+.stat-card:hover .value{animation:floatY 1.6s ease-in-out infinite}
+.stat-card{position:relative;overflow:hidden}
+.stat-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#60a5fa,var(--accent));background-size:200% 100%;animation:gradientShift 4s ease infinite;opacity:0.8}
+
+.page-header h1{background:linear-gradient(90deg,var(--text-primary),var(--accent),var(--text-primary));background-size:200% auto;-webkit-background-clip:text;background-clip:text;animation:gradientShift 8s ease infinite}
+.filter-bar{transition:transform var(--transition),box-shadow var(--transition)}
+.filter-bar:hover{box-shadow:0 16px 36px rgba(26,42,58,0.12)}
+.filter-bar input:focus,.filter-bar select:focus,.table-toolbar input:focus,.table-toolbar select:focus{animation:glowPulse 1.2s ease}
+
+.sidebar-nav a.active{animation:glowPulse 2.4s ease infinite}
+.toast{animation:toastIn 0.3s ease}
+.toast.success,.toast.error{animation:toastIn 0.3s ease,floatY 3s ease-in-out 0.4s infinite}
+
+.card,.form-card,.stat-card{animation:fadeUp 0.45s ease both}
+.status-dot.fail{animation:pulse 1.8s ease infinite}
+.status-dot.pass{box-shadow:0 0 0 3px rgba(22,163,74,0.15)}
+
+@media(max-width:768px){
+  .card-head-row{flex-direction:column;align-items:stretch}
+  .table-toolbar{flex-direction:column;align-items:stretch}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;transition-duration:0.01ms !important}
+}

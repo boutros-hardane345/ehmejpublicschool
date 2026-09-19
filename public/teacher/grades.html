@@ -92,8 +92,13 @@
       </div>
 
       <div class="card">
-        <h2 id="gradeTableLabel">Grades</h2>
-        <p id="gradeCount">0 grades recorded</p>
+        <div class="card-head-row">
+          <div>
+            <h2 id="gradeTableLabel">Grades</h2>
+            <p id="gradeCount">0 grades recorded</p>
+          </div>
+          <button class="btn btn-danger btn-sm" id="deleteShownGrades" title="Delete all grades in the current view">Delete shown</button>
+        </div>
         <div class="tbl-responsive mt-1">
           <table>
             <thead id="gradesTableHead"></thead>

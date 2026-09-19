@@ -63,12 +63,27 @@
       </div>
 
       <div class="card">
-        <h2>Student Results</h2>
+        <div class="card-head-row">
+          <h2>Student Results</h2>
+          <span class="badge badge-neutral" id="yrVisibleCount">0 shown</span>
+        </div>
+        <div class="table-toolbar">
+          <div class="filter-group grow">
+            <label for="yrSearch">Search student</label>
+            <input type="search" id="yrSearch" placeholder="Type a name..." autocomplete="off">
+          </div>
+          <div class="filter-group">
+            <label for="yrClassQuick">Class</label>
+            <select id="yrClassQuick"><option value="all">All classes</option><option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option></select>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="yrClearFilters" type="button">Clear</button>
+        </div>
+        <p class="hint">Tip: click <strong>Student</strong>, <strong>Avg /60</strong> or <strong>Status</strong> headers to sort.</p>
         <div class="tbl-responsive mt-1">
-          <table>
+          <table class="sortable">
             <thead>
-              <tr><th rowspan="2">Student</th><th rowspan="2">Class</th><th rowspan="2">Year</th><th colspan="6">Period Scores /60</th><th colspan="2">Cumulative</th></tr>
-              <tr><th>S1</th><th>S2</th><th>Mid</th><th>S3</th><th>S4</th><th>Final</th><th>Avg /60</th><th>Status</th></tr>
+              <tr><th rowspan="2" data-sort="name" class="th-sort">Student <span class="sort-arrow"></span></th><th rowspan="2">Class</th><th rowspan="2">Year</th><th colspan="6">Period Scores /60</th><th colspan="2">Cumulative</th></tr>
+              <tr><th>S1</th><th>S2</th><th>Mid</th><th>S3</th><th>S4</th><th>Final</th><th data-sort="avg" class="th-sort">Avg /60 <span class="sort-arrow"></span></th><th data-sort="status" class="th-sort">Status <span class="sort-arrow"></span></th></tr>
             </thead>
             <tbody id="yearResultsBody"></tbody>
           </table>
