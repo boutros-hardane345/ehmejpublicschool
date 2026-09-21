@@ -242,8 +242,10 @@ app.post('/login', h(async (req, res) => {
 }));
 
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid', { path: '/' });
+    res.redirect('/login');
+  });
 });
 
 // ============ TEACHER ROUTES ============
@@ -969,10 +971,10 @@ app.get('/api/portal/me', h(async (req, res) => {
 }));
 
 app.get('/portal/logout', (req, res) => {
-  req.session.studentAccountId = null;
-  req.session.studentClassName = null;
-  req.session.studentName = null;
-  req.session.save(() => res.redirect('/login'));
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid', { path: '/' });
+    res.redirect('/login');
+  });
 });
 
 // Student self DS (session-based, DS-only, yearly quota, progressive — for waiting)

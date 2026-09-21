@@ -26,9 +26,9 @@ function renderDsTable() {
   const q = (document.getElementById('dsearch').value || '').toLowerCase();
   const rows = dsRows.filter(r => !q || r.student.name.toLowerCase().includes(q));
   document.getElementById('dsCount').textContent = rows.length + ' students • ' + dsQuota + ' DS each (/20, empty = waiting)';
-  let heads = '<tr><th style="position:sticky;left:0;background:var(--bg-card)">Student</th>';
-  for (let i = 1; i <= dsQuota; i++) heads += '<th>DS' + i + '</th>';
-  heads += '<th>Save</th></tr>';
+  let heads = '<tr><th class="ds-student">Student</th>';
+  for (let i = 1; i <= dsQuota; i++) heads += '<th class="ds-col">DS' + i + '</th>';
+  heads += '<th class="ds-save">Save</th></tr>';
   document.getElementById('dsTableHead').innerHTML = heads;
   const tbody = document.getElementById('dsTableBody');
   if (rows.length === 0) {
@@ -40,10 +40,11 @@ function renderDsTable() {
     let cells = '';
     for (let i = 0; i < dsQuota; i++) {
       const v = r.ds ? r.ds[i] : null;
-      cells += '<td><input type="number" min="0" max="20" step="0.5" style="width:64px" id="ds_' + sid + '_' + i + '" value="' + (v === null || v === undefined ? '' : v) + '"></td>';
+      const filled = (v !== null && v !== undefined && v !== '') ? ' filled' : '';
+      cells += '<td class="ds-col"><input type="number" min="0" max="20" step="0.5" class="ds-input' + filled + '" id="ds_' + sid + '_' + i + '" value="' + (v === null || v === undefined ? '' : v) + '"></td>';
     }
-    return '<tr><td style="position:sticky;left:0;background:var(--bg-card)"><strong>' + escapeHtml(r.student.name) + '</strong></td>' + cells +
-      '<td><button class="btn btn-sm btn-success" onclick="saveDsRow(\'' + sid + '\')">Save</button></td></tr>';
+    return '<tr><td class="ds-student" title="' + escapeHtml(r.student.name) + '"><strong>' + escapeHtml(r.student.name) + '</strong></td>' + cells +
+      '<td class="ds-save"><button class="btn btn-sm btn-success" onclick="saveDsRow(\'' + sid + '\')">Save</button></td></tr>';
   }).join('');
 }
 

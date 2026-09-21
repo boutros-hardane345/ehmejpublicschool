@@ -72,8 +72,12 @@ input,select,textarea{font-family:var(--font-body);font-size:0.9rem;color:var(--
 .sidebar-nav a{display:flex;align-items:center;gap:0.7rem;padding:0.65rem 1.2rem;color:var(--sidebar-text);text-decoration:none;font-size:0.85rem;font-weight:500;transition:all var(--transition);border-left:3px solid transparent;opacity:0.75;animation:slideRight 0.4s ease forwards;animation-delay:calc(var(--i,0)*0.04s)}
 .sidebar-nav a:hover{opacity:1;color:#fff;background:rgba(255,255,255,0.05);border-left-color:var(--sidebar-hover);padding-left:1.5rem}
 .sidebar-nav a.active{opacity:1;color:var(--sidebar-hover);background:var(--sidebar-active-bg);border-left-color:var(--sidebar-hover);font-weight:600}
-.sidebar-nav a.logout{margin-top:auto;border-top:1px solid rgba(255,255,255,0.06);padding-top:1rem;margin-bottom:0;opacity:0.6;font-size:0.8rem}
-.sidebar-nav a.logout:hover{opacity:1;color:var(--danger)}
+.sidebar-nav a.logout{margin-top:auto;margin-left:1rem;margin-right:1rem;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center;background:var(--danger);color:#fff !important;font-weight:700;font-size:0.85rem;border-radius:var(--radius-sm);border-left:none;padding:0.65rem 1rem;opacity:1}
+.sidebar-nav a.logout:hover{background:#b91c1c;color:#fff !important;padding-left:1rem;box-shadow:0 4px 14px rgba(220,38,38,0.35)}
+/* Prominent red logout on student/teacher portal */
+.portal-logout-bar{display:flex;justify-content:flex-end;margin-bottom:1rem}
+.portal-logout-bar .btn-danger,.portal-section .btn-danger{text-decoration:none}
+.btn-logout{background:var(--danger);color:#fff !important}
 .sidebar-footer{padding:1rem 1.2rem;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;color:rgba(255,255,255,0.35);line-height:1.5}
 .sidebar-footer em{font-style:italic;display:block;color:rgba(255,255,255,0.5)}
 .sidebar-toggle{display:none;position:fixed;top:12px;left:12px;z-index:300;width:36px;height:36px;background:var(--sidebar-bg);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-sm);color:var(--sidebar-text);cursor:pointer;align-items:center;justify-content:center;transition:var(--transition)}
@@ -403,4 +407,25 @@ tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0.01ms !important;transition-duration:0.01ms !important}
+}
+
+/* ====== DS GRADES: fit all columns, no sideways scroll (this page only) ====== */
+.ds-page .container-wide{max-width:none}
+.ds-page.main-content{padding-left:1.25rem;padding-right:1.25rem}
+.ds-wrap{overflow-x:visible}
+.ds-table{table-layout:fixed;width:100%}
+.ds-table th,.ds-table td{padding:0.25rem 0.2rem;font-size:0.78rem;text-align:center;vertical-align:middle}
+.ds-table th.ds-student,.ds-table td.ds-student{width:150px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-table th.ds-save,.ds-table td.ds-save{width:64px}
+.ds-table .ds-input{width:100%;max-width:48px;margin:0 auto;padding:0.25rem 0.15rem;text-align:center;font-size:0.8rem}
+.ds-table .ds-input.filled{background:var(--positive-bg);border-color:var(--positive)}
+.ds-table tbody tr:nth-child(even) td{background:rgba(37,99,235,0.04)}
+.ds-table .ds-save .btn{padding:0.3rem 0.55rem;font-size:0.72rem}
+/* Small screens: 21 columns cannot fit — allow scroll with sticky name column */
+@media(max-width:1100px){
+  .ds-wrap{overflow-x:auto}
+  .ds-table{width:max-content;min-width:100%}
+  .ds-table th.ds-student,.ds-table td.ds-student{position:sticky;left:0;background:var(--bg-card);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,0.06)}
+  .ds-table thead th{position:sticky;top:0;background:var(--bg-page);z-index:1}
+  .ds-table thead th.ds-student{z-index:3}
 }

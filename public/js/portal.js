@@ -60,12 +60,13 @@ function renderPortalBody(className, me) {
   const isTeacher = me && me.role === 'teacher';
   document.getElementById('portalSubtitle').textContent = 'Announcements and Exercises for ' + className + (me && me.name ? ' — ' + me.name : '');
   document.getElementById('portalContent').innerHTML =
+    '<div class="portal-logout-bar"><a href="' + (isStudent ? '/portal/logout' : '/logout') + '" class="btn btn-danger">Logout</a></div>' +
     '<div class="portal-content" id="portalColumns">' +
     '<div class="portal-section"><h2>Announcements</h2><div id="announcementsList"><p class="text-muted">Loading...</p></div></div>' +
     '<div class="portal-section"><h2>Coursework & Exercises</h2><div id="exercisesList"><p class="text-muted">Loading...</p></div></div>' +
     '</div>' +
-    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div><p><a href="/portal/logout" class="text-muted">Logout</a></p></div></div>' : '') +
-    (isTeacher ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><p class="text-muted">Teacher preview. Manage chats in <a href="/teacher/chats">Chats</a>. <a href="/logout">Logout</a></p></div></div>' : '') +
+    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div><p style="margin-top:1rem"><a href="/portal/logout" class="btn btn-danger">Logout</a></p></div></div>' : '') +
+    (isTeacher ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><p class="text-muted">Teacher preview. Manage chats in <a href="/teacher/chats">Chats</a>.</p><p style="margin-top:1rem"><a href="/logout" class="btn btn-danger">Logout</a></p></div></div>' : '') +
     (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My Chat with Teacher</h2><div id="myThread" class="content-feed"><p class="text-muted">Loading...</p></div><div style="display:flex;gap:.5rem;margin-top:.5rem"><input type="text" id="chatInput" placeholder="Write a message..." style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)"><button class="btn btn-primary" type="button" id="sendChat">Send</button></div></div></div>' : '');
 
   API.get('/api/content?className=' + encodeURIComponent(className)).then(data => {

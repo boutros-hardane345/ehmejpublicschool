@@ -33,8 +33,8 @@
   <div class="sidebar-overlay" onclick="document.getElementById('sidebar').classList.remove('open')"></div>
   <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
 
-  <main class="main-content">
-    <div class="container stagger">
+  <main class="main-content ds-page">
+    <div class="container container-wide stagger">
       <div class="page-header">
         <p class="eyebrow">DS Entry</p>
         <h1>DS Grades</h1>
@@ -58,11 +58,11 @@
         <button class="btn btn-primary" id="dsSaveAllBtn">Save all</button>
       </div>
 
-      <div class="card">
+      <div class="card ds-card">
         <h2 id="dsTableLabel">DS Grades</h2>
         <p id="dsCount">0 students</p>
-        <div class="tbl-responsive mt-1" style="overflow-x:auto">
-          <table>
+        <div class="tbl-responsive ds-wrap mt-1">
+          <table class="ds-table">
             <thead id="dsTableHead"></thead>
             <tbody id="dsTableBody"></tbody>
           </table>
