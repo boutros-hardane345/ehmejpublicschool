@@ -20,7 +20,7 @@
       <a href="/teacher/content" style="--i:3">Content</a>
       <a href="/teacher/grades" style="--i:4">Grades</a><a href="/teacher/ds-grades" style="--i:5">DS Grades</a>
       <a href="/teacher/year-results" style="--i:5">Year Results</a>
-      <a href="/teacher/productivity" style="--i:6">Productivity</a><a href="/teacher/logins" style="--i:7">Logins</a><a href="/teacher/chats" style="--i:8">Chats</a>
+      <a href="/teacher/productivity" class="active" style="--i:6">Productivity</a><a href="/teacher/logins" style="--i:7">Logins</a><a href="/teacher/chats" style="--i:8">Chats</a>
       <a href="/logout" class="logout" style="--i:7">Logout</a>
     </nav>
     <div class="sidebar-footer">
@@ -33,53 +33,152 @@
   <main class="main-content">
     <div class="container stagger">
       <div class="page-header">
-        <p class="eyebrow">Tools & Utilities</p>
+        <p class="eyebrow">Tools &amp; Utilities</p>
         <h1>Productivity</h1>
-        <p>Pick names and form groups from your class.</p>
+        <p>Pick names, form groups, track tasks, stay focused and jot notes — all in one place.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Students loaded</div><div class="value" id="prodStudents">0</div></div>
+        <div class="stat-card"><div class="label">Groups generated</div><div class="value" id="prodGroups">0</div></div>
+        <div class="stat-card"><div class="label">Tasks done</div><div class="value positive" id="prodTasksDone">0</div></div>
+        <div class="stat-card"><div class="label">Focus sessions</div><div class="value warning" id="prodSessions">0</div></div>
       </div>
 
       <div class="split-layout">
         <div class="card tool-card">
-          <div class="section-heading">
-            <h2><i class="fas fa-dice"></i> Name Picker</h2>
+          <div class="tool-head">
+            <h2>Name Picker</h2>
+            <span class="badge badge-neutral" id="pickerRemaining">0 left</span>
           </div>
-          <div style="margin:1rem 0">
-            <select id="pickerClass" style="width:100%;padding:8px;margin-bottom:8px">
-              <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
-            </select>
-            <select id="pickerYear" style="width:100%;padding:8px;margin-bottom:1rem">
-              <option value="2026-2027">2026-2027</option><option value="2025-2026">2025-2026</option>
-            </select>
+          <p class="tool-sub">Fair random picks — each name is set aside until reset. Click a chip to exclude/include.</p>
+          <div class="form-row">
+            <div>
+              <label for="pickerClass">Class</label>
+              <select id="pickerClass">
+                <option value="Grade 7">Grade 7</option><option value="Grade 8" selected>Grade 8</option><option value="Grade 9">Grade 9</option>
+              </select>
+            </div>
+            <div>
+              <label for="pickerYear">Year</label>
+              <select id="pickerYear"><option value="">Loading...</option></select>
+            </div>
           </div>
           <div class="picker-display">
             <div class="result" id="teacherPickerResult">Ready</div>
           </div>
-          <div class="picker-display" style="margin-top:.5rem">
-            <div id="teacherPickerPool" style="display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.5rem"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="pickBtn">Pick One</button>
+            <button class="btn btn-secondary" id="pickerLoadBtn">Load</button>
+            <button class="btn btn-secondary" id="pickerResetBtn">Reset</button>
           </div>
-          <div style="display:flex;gap:0.5rem;margin-top:1rem">
-            <button class="btn btn-primary" onclick="pickName()"><i class="fas fa-dice"></i> Pick One</button>
-            <button class="btn btn-secondary" onclick="initNamePicker()">Load</button>
-            <button class="btn btn-secondary" onclick="resetPicker()">Reset</button>
+          <div id="teacherPickerPool" class="chip-pool"></div>
+          <div class="history-block">
+            <h4>Pick history</h4>
+            <div id="pickerHistory" class="history-chips"><span class="text-muted">No picks yet.</span></div>
           </div>
         </div>
 
         <div class="card tool-card">
-          <div class="section-heading">
-            <h2><i class="fas fa-users"></i> Group Generator</h2>
+          <div class="tool-head">
+            <h2>Group Generator</h2>
+            <span class="badge badge-neutral" id="groupSummary">—</span>
           </div>
-          <div style="margin:1rem 0">
-            <select id="groupClass" style="width:100%;padding:8px;margin-bottom:8px">
-              <option value="Grade 7">Grade 7</option><option value="Grade 8" selected>Grade 8</option><option value="Grade 9">Grade 9</option>
-            </select>
-            <select id="groupYear" style="width:100%;padding:8px;margin-bottom:1rem">
-              <option value="">Loading years...</option>
-            </select>
+          <p class="tool-sub">Split a class into balanced random groups.</p>
+          <div class="form-row">
+            <div>
+              <label for="groupClass">Class</label>
+              <select id="groupClass">
+                <option value="Grade 7">Grade 7</option><option value="Grade 8" selected>Grade 8</option><option value="Grade 9">Grade 9</option>
+              </select>
+            </div>
+            <div>
+              <label for="groupYear">Year</label>
+              <select id="groupYear"><option value="">Loading...</option></select>
+            </div>
           </div>
-          <input type="number" id="groupSize" min="1" max="10" value="3" style="width:100%;padding:8px;margin-bottom:1rem">
-          <button class="btn btn-primary" onclick="initGroupGenerator()"><i class="fas fa-shuffle"></i> Generate Groups</button>
-          <div id="teacherGroupsContainer"></div>
+          <div class="form-row">
+            <div>
+              <label for="groupMode">Split by</label>
+              <select id="groupMode">
+                <option value="count">Number of groups</option>
+                <option value="size">Students per group</option>
+              </select>
+            </div>
+            <div>
+              <label for="groupSize">Value</label>
+              <input type="number" id="groupSize" min="2" max="12" value="3">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="genGroupsBtn">Generate Groups</button>
+            <button class="btn btn-secondary" id="reshuffleBtn">Reshuffle</button>
+            <button class="btn btn-secondary" id="copyGroupsBtn">Copy</button>
+          </div>
+          <div id="teacherGroupsContainer" class="groups-container mt-1"></div>
         </div>
+      </div>
+
+      <div class="split-layout">
+        <div class="card tool-card">
+          <div class="tool-head">
+            <h2>Task Manager</h2>
+            <span class="badge badge-neutral" id="todoCount">0 open</span>
+          </div>
+          <p class="tool-sub">Server-saved checklist for marking, prep and reminders.</p>
+          <form id="todoForm" class="todo-form">
+            <input type="text" id="todoTitle" placeholder="New task... (e.g. Mark Grade 8 DS3)" maxlength="120" required>
+            <select id="todoCategory">
+              <option value="general">General</option>
+              <option value="marking">Marking</option>
+              <option value="prep">Lesson prep</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
+          </form>
+          <div class="todo-filters btn-row">
+            <button class="btn btn-secondary btn-sm todo-filter active" data-f="all" type="button">All</button>
+            <button class="btn btn-secondary btn-sm todo-filter" data-f="open" type="button">Open</button>
+            <button class="btn btn-secondary btn-sm todo-filter" data-f="done" type="button">Done</button>
+          </div>
+          <div id="todoList" class="todo-list"><div class="skel"></div><div class="skel"></div></div>
+        </div>
+
+        <div class="card tool-card">
+          <div class="tool-head">
+            <h2>Focus Timer</h2>
+            <span class="badge badge-warning" id="timerPhase">Ready</span>
+          </div>
+          <p class="tool-sub">Pomodoro-style sprints for marking and prep.</p>
+          <div class="timer-display">
+            <div class="timer-ring"><span class="time" id="timerTime">25:00</span></div>
+            <div class="phase" id="timerSub">25 min focus &middot; 5 min break</div>
+            <div class="timer-controls btn-row">
+              <button class="btn btn-primary btn-sm" id="timerStart" type="button">Start</button>
+              <button class="btn btn-secondary btn-sm" id="timerPause" type="button">Pause</button>
+              <button class="btn btn-secondary btn-sm" id="timerReset" type="button">Reset</button>
+            </div>
+            <div class="form-row timer-presets">
+              <div>
+                <label for="focusLen">Focus (min)</label>
+                <input type="number" id="focusLen" min="5" max="90" value="25">
+              </div>
+              <div>
+                <label for="breakLen">Break (min)</label>
+                <input type="number" id="breakLen" min="1" max="30" value="5">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card tool-card">
+        <div class="tool-head">
+          <h2>Quick Notes</h2>
+          <span class="badge badge-neutral" id="notesStatus">Autosaved</span>
+        </div>
+        <p class="tool-sub">Ideas and reminders — stored in this browser, saved as you type.</p>
+        <textarea class="note-area" id="notesArea" placeholder="Write your notes here..."></textarea>
       </div>
     </div>
   </main>
