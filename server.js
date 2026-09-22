@@ -167,6 +167,39 @@ app.use((err, req, res, next) => {
   res.status(500).send('Session error');
 });
 
+// Logout + anti-cache helpers: cookie must be cleared with the same
+// attributes it was set with, otherwise the secure cookie survives in prod
+// and the login page auto-forward bounces straight back to the old portal
+// (looks like "logout does nothing", breaks sibling1 -> sibling2 switch).
+const clearSessionCookie = res => res.clearCookie('connect.sid', {
+  path: '/',
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production'
+});
+const noStore = res => res.set({
+  'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+  'Pragma': 'no-cache',
+  'Expires': '0'
+});
+const destroySession = (req, res, done) => {
+  // req.session may already be empty after a previous logout — still clear cookie
+  if (!req.session) return done();
+  req.session.destroy(err => done(err));
+};
+
+// Never allow browsers/proxies to cache auth-sensitive pages or identity API.
+// Fixes Back-button / bfcache showing the old portal after logout.
+app.use((req, res, next) => {
+  const p = req.path;
+  const sensitive =
+    p === '/login' || p === '/portal/login' ||
+    p === '/portal' || p.startsWith('/portal/') ||
+    p === '/api/portal/me';
+  if (req.method === 'GET' && sensitive) noStore(res);
+  next();
+});
+
 const protectedStaticPages = new Set([
   '/', '/index.html', '/lesson-planner.html',
   '/schedule.html', '/productivity.html', '/students.html',
@@ -242,9 +275,20 @@ app.post('/login', h(async (req, res) => {
 }));
 
 app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('connect.sid', { path: '/' });
-    res.redirect('/login');
+  destroySession(req, res, () => {
+    clearSessionCookie(res);
+    noStore(res);
+    res.redirect('/login?loggedout=1');
+  });
+});
+
+// JS logout endpoint used by portal/logout buttons: POST -> JSON so the
+// client can drop local state and use location.replace (no history entry).
+app.post('/api/logout', (req, res) => {
+  destroySession(req, res, () => {
+    clearSessionCookie(res);
+    noStore(res);
+    res.json({ success: true });
   });
 });
 
@@ -919,6 +963,10 @@ app.post('/portal/login', h(async (req, res) => {
   if (!acc) return res.status(401).json({ error: 'Invalid username or password' });
   const ok = await bcrypt.compare(req.body.password || '', acc.passwordHash);
   if (!ok) return res.status(401).json({ error: 'Invalid username or password' });
+  // Clear teacher flags so roles never mix; allows sibling2 to take over
+  // a session previously used by a teacher preview or sibling1.
+  req.session.isAuthenticated = false;
+  req.session.role = 'student';
   req.session.studentAccountId = acc._id.toString();
   req.session.studentClassName = acc.className;
   req.session.studentName = (await Student.findById(acc.studentId))?.name || acc.username;
@@ -954,6 +1002,10 @@ app.post('/api/login', h(async (req, res) => {
     if (!acc) return res.status(401).json({ error: 'Invalid login' });
     const ok = await bcrypt.compare(password, acc.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Invalid login' });
+    // Clear teacher flags so a shared/sibling device never stays "teacher"
+    // after a student logs in (and sibling2 can take over sibling1's session).
+    req.session.isAuthenticated = false;
+    req.session.role = 'student';
     req.session.studentAccountId = acc._id.toString();
     req.session.studentClassName = acc.className;
     req.session.studentName = (await Student.findById(acc.studentId))?.name || acc.username;
@@ -965,15 +1017,17 @@ app.post('/api/login', h(async (req, res) => {
 }));
 
 app.get('/api/portal/me', h(async (req, res) => {
+  noStore(res);
   if (req.session.isAuthenticated) return res.json({ loggedIn: true, role: 'teacher' });
   if (req.session.studentAccountId) return res.json({ loggedIn: true, role: 'student', className: req.session.studentClassName, name: req.session.studentName });
   res.json({ loggedIn: false, role: null });
 }));
 
 app.get('/portal/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('connect.sid', { path: '/' });
-    res.redirect('/login');
+  destroySession(req, res, () => {
+    clearSessionCookie(res);
+    noStore(res);
+    res.redirect('/login?loggedout=1');
   });
 });
 

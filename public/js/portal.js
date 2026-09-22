@@ -3,6 +3,36 @@ const CLASS_CODES = { 'Grade 7': 'EB7', 'Grade 8': 'EB8', 'Grade 9': 'EB9' };
 
 function getClassCode(c) { return CLASS_CODES[c] || ''; }
 
+// Reliable logout: destroy server session via POST, drop local state,
+// then replace history so Back never restores the old portal.
+// Fixes "logout leaves page on portal" and sibling1 -> sibling2 switch.
+async function doLogout(e) {
+  if (e) e.preventDefault();
+  try {
+    await fetch('/api/logout', { method: 'POST', cache: 'no-store', credentials: 'same-origin' });
+  } catch (err) {
+    try { await fetch('/portal/logout', { cache: 'no-store', credentials: 'same-origin', redirect: 'manual' }); } catch (e2) {}
+  }
+  try { sessionStorage.clear(); } catch (err) {}
+  try { localStorage.clear(); } catch (err) {}
+  window.location.replace('/login?loggedout=1');
+}
+
+document.addEventListener('click', function (e) {
+  const t = e.target && e.target.closest ? e.target.closest('.js-logout') : null;
+  if (t) doLogout(e);
+});
+
+// bfcache guard: if user presses Back after logout, force login page.
+window.addEventListener('pageshow', async function (e) {
+  if (!e.persisted) return;
+  try {
+    const r = await fetch('/api/portal/me', { cache: 'no-store', credentials: 'same-origin' });
+    const me = await r.json();
+    if (!me || !me.loggedIn) window.location.replace('/login?loggedout=1');
+  } catch (err) {}
+});
+
 function loadQuote() {
   API.get('/api/quote').then(q => {
     document.getElementById('quoteText').textContent = '"' + q.text + '"';
@@ -27,7 +57,7 @@ async function renderClassPortal(className) {
   document.getElementById('footerClassCode').textContent = getClassCode(className);
   let me = null;
   try {
-    const r = await fetch('/api/portal/me');
+    const r = await fetch('/api/portal/me', { cache: 'no-store', credentials: 'same-origin' });
     me = await r.json();
   } catch (e) { me = null; }
   if (!me || !me.loggedIn) {
@@ -60,13 +90,13 @@ function renderPortalBody(className, me) {
   const isTeacher = me && me.role === 'teacher';
   document.getElementById('portalSubtitle').textContent = 'Announcements and Exercises for ' + className + (me && me.name ? ' — ' + me.name : '');
   document.getElementById('portalContent').innerHTML =
-    '<div class="portal-logout-bar"><a href="' + (isStudent ? '/portal/logout' : '/logout') + '" class="btn btn-danger">Logout</a></div>' +
+    '<div class="portal-logout-bar"><a href="/login?loggedout=1" class="btn btn-danger js-logout">Logout</a></div>' +
     '<div class="portal-content" id="portalColumns">' +
     '<div class="portal-section"><h2>Announcements</h2><div id="announcementsList"><p class="text-muted">Loading...</p></div></div>' +
     '<div class="portal-section"><h2>Coursework & Exercises</h2><div id="exercisesList"><p class="text-muted">Loading...</p></div></div>' +
     '</div>' +
-    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div><p style="margin-top:1rem"><a href="/portal/logout" class="btn btn-danger">Logout</a></p></div></div>' : '') +
-    (isTeacher ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><p class="text-muted">Teacher preview. Manage chats in <a href="/teacher/chats">Chats</a>.</p><p style="margin-top:1rem"><a href="/logout" class="btn btn-danger">Logout</a></p></div></div>' : '') +
+    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div><p style="margin-top:1rem"><a href="/login?loggedout=1" class="btn btn-danger js-logout">Logout</a></p></div></div>' : '') +
+    (isTeacher ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><p class="text-muted">Teacher preview. Manage chats in <a href="/teacher/chats">Chats</a>.</p><p style="margin-top:1rem"><a href="/login?loggedout=1" class="btn btn-danger js-logout">Logout</a></p></div></div>' : '') +
     (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My Chat with Teacher</h2><div id="myThread" class="content-feed"><p class="text-muted">Loading...</p></div><div style="display:flex;gap:.5rem;margin-top:.5rem"><input type="text" id="chatInput" placeholder="Write a message..." style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)"><button class="btn btn-primary" type="button" id="sendChat">Send</button></div></div></div>' : '');
 
   API.get('/api/content?className=' + encodeURIComponent(className)).then(data => {
