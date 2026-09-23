@@ -95,7 +95,7 @@ function renderPortalBody(className, me) {
     '<div class="portal-section"><h2>Announcements</h2><div id="announcementsList"><p class="text-muted">Loading...</p></div></div>' +
     '<div class="portal-section"><h2>Coursework & Exercises</h2><div id="exercisesList"><p class="text-muted">Loading...</p></div></div>' +
     '</div>' +
-    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div><p style="margin-top:1rem"><a href="/login?loggedout=1" class="btn btn-danger js-logout">Logout</a></p></div></div>' : '') +
+    (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My DS Grades (/20)</h2><div id="myDsList"><p class="text-muted">Loading...</p></div></div></div>' : '') +
     (isTeacher ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><p class="text-muted">Teacher preview. Manage chats in <a href="/teacher/chats">Chats</a>.</p><p style="margin-top:1rem"><a href="/login?loggedout=1" class="btn btn-danger js-logout">Logout</a></p></div></div>' : '') +
     (isStudent ? '<div class="portal-content"><div class="portal-section" style="grid-column:1/-1"><h2>My Chat with Teacher</h2><div id="myThread" class="content-feed"><p class="text-muted">Loading...</p></div><div style="display:flex;gap:.5rem;margin-top:.5rem"><input type="text" id="chatInput" placeholder="Write a message..." style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm)"><button class="btn btn-primary" type="button" id="sendChat">Send</button></div></div></div>' : '');
 
@@ -121,7 +121,7 @@ async function loadMyDs() {
     if (!data.ds || data.ds.length === 0) { el.innerHTML = '<p class="empty-state">No DS yet.</p>'; return; }
     el.innerHTML = '<div style="display:flex;gap:.4rem;flex-wrap:wrap">' +
       data.ds.map((v, i) => '<span class="badge badge-neutral" title="DS' + (i + 1) + '">DS' + (i + 1) + ': ' + (v === null ? '—' : Number(v).toFixed(1)) + '</span>').join('') +
-      '</div><p class="text-muted">Only DS grades are shown. ' + data.quota + ' DS for the year, filled over time.</p>';
+      '</div>';
   } catch (e) {
     el.innerHTML = '<p class="empty-state">' + apiErrorMessage(e, 'Could not load DS grades.') + '</p>';
   }
@@ -170,7 +170,7 @@ function renderAnnouncements(list) {
     list.map(a =>
       '<div class="feed-item">' +
       '<h4>' + escapeHtml(a.title) + '</h4>' +
-      '<p>' + escapeHtml(a.content) + '</p>' +
+      '<div class="rich-text">' + renderRichText(a.content) + '</div>' +
       '<div class="feed-meta"><span>' + formatDate(a.createdAt) + '</span></div>' +
       '</div>'
     ).join('') +
@@ -187,15 +187,57 @@ function renderExercises(list) {
     list.map(e =>
       '<div class="feed-item">' +
       '<h4>' + escapeHtml(e.title) + '</h4>' +
-      '<p>' + escapeHtml(e.description || 'No description') + '</p>' +
+      '<div class="rich-text">' + renderRichText(e.description || 'No description') + '</div>' +
       '<div class="feed-meta">' +
       (e.semester ? '<span>Semester ' + e.semester + '</span>' : '') +
       '<span>' + formatDate(e.createdAt) + '</span>' +
       '</div>' +
-      (e.fileUrl ? '<a href="/download/' + e._id + '" class="download" target="_blank">Download file</a>' : '') +
+      (e.fileUrl ? '<a href="/download/' + e._id + '" class="btn btn-primary btn-sm download-btn" target="_blank">Download file</a>' : '') +
       '</div>'
     ).join('') +
     '</div>';
+}
+
+function sanitizeRichHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = String(html == null ? '' : html);
+  const allowedTags = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, BR: 1, P: 1, UL: 1, OL: 1, LI: 1, SPAN: 1, FONT: 1, DIV: 1 };
+  const walker = document.createTreeWalker(tmp, NodeFilter.SHOW_ELEMENT, null);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(function (node) {
+    const tag = node.tagName;
+    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'IFRAME' || tag === 'OBJECT' || tag === 'EMBED' || tag === 'LINK' || !allowedTags[tag]) {
+      const parent = node.parentNode;
+      while (node.firstChild) parent.insertBefore(node.firstChild, node);
+      parent.removeChild(node);
+      return;
+    }
+    Array.from(node.attributes || []).forEach(function (attr) {
+      const name = attr.name.toLowerCase();
+      const val = attr.value || '';
+      if (name.startsWith('on') || val.toLowerCase().includes('javascript:')) { node.removeAttribute(attr.name); return; }
+      if (tag === 'SPAN' && name === 'style') {
+        const m = /color\s*:\s*(#[0-9a-f]{3,6}|rgb\([^)]*\)|red|blue|black|green|#dc2626)/i.exec(val);
+        if (m) node.setAttribute('style', 'color:' + m[1]);
+        else node.removeAttribute('style');
+        return;
+      }
+      if (tag === 'FONT' && name === 'color') {
+        if (!/^#[0-9a-f]{3,6}$/i.test(val) && !/^(red|blue|black|green)$/i.test(val)) node.removeAttribute('color');
+        return;
+      }
+      if (tag === 'SPAN' && name === 'class' && val !== 'text-red') { node.removeAttribute('class'); return; }
+      if (!((tag === 'SPAN' && (name === 'style' || name === 'class')) || (tag === 'FONT' && name === 'color'))) node.removeAttribute(attr.name);
+    });
+  });
+  return tmp.innerHTML;
+}
+
+function renderRichText(t) {
+  const s = String(t == null ? '' : t);
+  if (/<[a-z][\s\S]*>/i.test(s)) return sanitizeRichHtml(s);
+  return escapeHtml(s).replace(/\n/g, '<br>');
 }
 
 function escapeHtml(t) {

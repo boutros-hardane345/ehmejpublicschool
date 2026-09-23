@@ -65,8 +65,18 @@
               <input type="text" id="acTitle" placeholder="Announcement title" required>
             </div>
             <div style="margin-bottom:0.75rem">
-              <label for="acContent">Message</label>
-              <textarea id="acContent" placeholder="Write the message for students" rows="3" required></textarea>
+              <label for="acContentEditor">Message</label>
+              <div class="rte-toolbar" id="acToolbar">
+                <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                <button type="button" data-cmd="red" title="Red color" class="rte-red">A</button>
+                <button type="button" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+                <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+                <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+              </div>
+              <div id="acContentEditor" class="rte-editor" contenteditable="true" data-placeholder="Write the message for students"></div>
+              <input type="hidden" id="acContent">
             </div>
             <button type="submit" class="btn btn-primary">Publish</button>
           </form>
@@ -86,8 +96,18 @@
               <input type="text" id="exTitle" placeholder="Exercise title" required>
             </div>
             <div style="margin-bottom:0.75rem">
-              <label for="exDesc">Description</label>
-              <input type="text" id="exDesc" placeholder="Short description">
+              <label for="exDescEditor">Description</label>
+              <div class="rte-toolbar" id="exToolbar">
+                <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                <button type="button" data-cmd="red" title="Red color" class="rte-red">A</button>
+                <button type="button" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+                <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+                <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+              </div>
+              <div id="exDescEditor" class="rte-editor rte-small" contenteditable="true" data-placeholder="Short description"></div>
+              <input type="hidden" id="exDesc">
             </div>
             <div style="margin-bottom:0.75rem">
               <label for="exSem">Semester</label>

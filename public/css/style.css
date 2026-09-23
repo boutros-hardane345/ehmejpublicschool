@@ -246,6 +246,23 @@ tr:focus-within td{background:rgba(196,149,106,0.06)}
 .feed-item p{color:var(--text-secondary);font-size:0.88rem;margin-bottom:0.5rem}
 .feed-meta{display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center}
 .feed-meta span{font-size:0.75rem;color:var(--text-muted)}
+.feed-item .download-btn{margin-top:0.5rem;text-decoration:none}
+.rich-text{color:var(--text-secondary);font-size:0.88rem;margin-bottom:0.5rem;word-wrap:break-word}
+.rich-text p{margin:0 0 0.4rem}
+.rich-text ul,.rich-text ol{margin:0.3rem 0 0.5rem 1.2rem}
+.rich-text .text-red{color:var(--danger)}
+
+/* ====== RICH TEXT EDITOR ====== */
+.rte-toolbar{display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.4rem}
+.rte-toolbar button{padding:0.35rem 0.6rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-page);color:var(--text-primary);font-size:0.78rem;font-weight:600;line-height:1;transition:all var(--transition)}
+.rte-toolbar button:hover{border-color:var(--accent);color:var(--accent)}
+.rte-toolbar button.active{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.rte-toolbar .rte-red{color:var(--danger);font-weight:800}
+.rte-editor{min-height:90px;max-height:240px;overflow-y:auto;padding:0.6rem 0.8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-size:0.9rem;color:var(--text-primary)}
+.rte-editor:empty:before{content:attr(data-placeholder);color:var(--text-muted)}
+.rte-editor:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.rte-editor ul,.rte-editor ol{margin-left:1.2rem}
+.rte-small{min-height:64px}
 
 @media(max-width:768px){
   .feed-item{padding:0.75rem 1rem}

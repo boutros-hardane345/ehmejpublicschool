@@ -126,6 +126,14 @@ const getDailyMathQuote = () => { const d=new Date; return MATH_QUOTES[Math.floo
 const isValidClassName = c => CLASSES.includes(c);
 const isValidObjectId = id => mongoose.Types.ObjectId.isValid(id);
 const cleanText = value => (value || '').toString().trim();
+const cleanRich = value => String(value == null ? '' : value).trim()
+  .replace(/<script[\s\S]*?<\/script\s*>/gi, '')
+  .replace(/<style[\s\S]*?<\/style\s*>/gi, '')
+  .replace(/<iframe[\s\S]*?(<\/iframe\s*>|$)/gi, '')
+  .replace(/<(object|embed|link|meta)[\s\S]*?(<\/\1\s*>|$)/gi, '')
+  .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+  .replace(/javascript\s*:/gi, '');
+const richTextEmpty = value => cleanRich(value).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() === '';
 const isValidAcademicYear = year => {
   if (!/^\d{4}-\d{4}$/.test(year || '')) return false;
   const [start, end] = year.split('-').map(Number);
@@ -572,9 +580,9 @@ app.get('/api/content', h(async (req, res) => {
 }));
 
 app.post('/api/announcements', h(async (req, res) => {
-  const className = cleanText(req.body.className), title = cleanText(req.body.title), content = cleanText(req.body.content);
+  const className = cleanText(req.body.className), title = cleanText(req.body.title), content = cleanRich(req.body.content);
   if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (!title || !content) return badRequest(res, 'Title and message are required');
+  if (!title || richTextEmpty(content)) return badRequest(res, 'Title and message are required');
   const a = await Announcement.create({ className, title, content });
   res.json(a);
 }));
@@ -587,14 +595,14 @@ app.delete('/api/announcements/:id', h(async (req, res) => {
 
 app.put('/api/announcements/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid announcement id');
-  const className = cleanText(req.body.className), title = cleanText(req.body.title), content = cleanText(req.body.content);
+  const className = cleanText(req.body.className), title = cleanText(req.body.title), content = cleanRich(req.body.content);
   if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
-  if (!title || !content) return badRequest(res, 'Title and message are required');
+  if (!title || richTextEmpty(content)) return badRequest(res, 'Title and message are required');
   res.json(await Announcement.findByIdAndUpdate(req.params.id, { className, title, content }, { new: true }));
 }));
 
 app.post('/api/exercises', uploadExerciseFile, h(async (req, res) => {
-  const className = cleanText(req.body.className), title = cleanText(req.body.title), description = cleanText(req.body.description);
+  const className = cleanText(req.body.className), title = cleanText(req.body.title), description = cleanRich(req.body.description);
   const semester = req.body.semester ? parseInt(req.body.semester, 10) : undefined;
   if (!isValidClassName(className)) { deleteUploadedFile(req.file); return badRequest(res, 'Invalid class'); }
   if (!title) { deleteUploadedFile(req.file); return badRequest(res, 'Exercise title is required'); }
@@ -622,7 +630,7 @@ app.delete('/api/exercises/:id', h(async (req, res) => {
 
 app.put('/api/exercises/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid exercise id');
-  const className = cleanText(req.body.className), title = cleanText(req.body.title), description = cleanText(req.body.description);
+  const className = cleanText(req.body.className), title = cleanText(req.body.title), description = cleanRich(req.body.description);
   const semester = req.body.semester ? parseInt(req.body.semester, 10) : undefined;
   if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
   if (!title) return badRequest(res, 'Exercise title is required');
