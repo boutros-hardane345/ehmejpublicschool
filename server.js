@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const bcrypt = require('bcryptjs');
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch { /* email alerts disabled until installed */ }
 
 const app = express();
 
@@ -145,6 +147,34 @@ const isValidAcademicYear = year => {
 };
 const badRequest = (res, msg) => res.status(400).json({ error: msg });
 
+// Chat email alerts: student question -> teacher inbox (fire-and-forget).
+// Requires SMTP_USER + SMTP_PASS (Gmail App Password). If unset, chat still
+// saves normally and a warning is logged once at startup.
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'boutroshardanesg@gmail.com';
+let mailer = null;
+const getMailer = () => {
+  if (mailer || !nodemailer) return mailer;
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
+  mailer = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: parseInt(process.env.SMTP_PORT || '587', 10) === 465,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS.replace(/\s+/g, '') }
+  });
+  return mailer;
+};
+const notifyTeacherNewMessage = ({ studentName, className, text }) => {
+  const transport = getMailer();
+  if (!transport) return Promise.resolve(false);
+  const when = new Date().toLocaleString();
+  return transport.sendMail({
+    from: process.env.SMTP_USER,
+    to: NOTIFY_EMAIL,
+    subject: `New student question — ${studentName} (${className})`,
+    text: `Student: ${studentName}\nClass: ${className}\nTime: ${when}\n\nQuestion:\n${text}\n\nReply: /teacher/chats`
+  }).then(() => true);
+};
+
 if (!process.env.MONGODB_URI) {
   console.error('Missing required environment variable: MONGODB_URI');
   process.exit(1);
@@ -158,6 +188,9 @@ if (!process.env.ADMIN_EMAIL || (!process.env.ADMIN_PASSWORD && !process.env.ADM
   process.exit(1);
 }
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  console.warn('Chat email alerts disabled: set SMTP_USER + SMTP_PASS (Gmail App Password) to notify ' + NOTIFY_EMAIL);
+}
 
 // Middleware
 app.use(express.json());
@@ -1105,6 +1138,12 @@ app.post('/api/portal/my-thread/message', h(async (req, res) => {
   thread.messages.push({ senderRole: 'student', senderName: req.session.studentName, text });
   thread.updatedAt = new Date();
   await thread.save();
+  // Email teacher — never blocks/fails the student response
+  notifyTeacherNewMessage({
+    studentName: req.session.studentName,
+    className: req.session.studentClassName,
+    text
+  }).catch(err => console.error('Chat email alert failed:', err.message));
   res.json({ success: true });
 }));
 
