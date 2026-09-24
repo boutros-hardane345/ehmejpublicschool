@@ -1143,8 +1143,30 @@ app.post('/api/portal/my-thread/message', h(async (req, res) => {
     studentName: req.session.studentName,
     className: req.session.studentClassName,
     text
+  }).then(sent => {
+    if (sent) console.log(`Chat email alert sent for ${req.session.studentName}`);
+    else console.warn('Chat email alert skipped (SMTP not configured)');
   }).catch(err => console.error('Chat email alert failed:', err.message));
   res.json({ success: true });
+}));
+
+// Teacher-only: send a test alert email on demand (verify SMTP without a student).
+// Usage (logged in as teacher): fetch('/api/test-email', {method:'POST'})
+app.post('/api/test-email', isApiAuth, h(async (req, res) => {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return res.status(400).json({ sent: false, error: 'SMTP_USER/SMTP_PASS not set on server' });
+  }
+  try {
+    await notifyTeacherNewMessage({
+      studentName: 'Test Student',
+      className: 'Grade 7',
+      text: 'This is a test alert. If you got this, chat notifications work.'
+    });
+    res.json({ sent: true, to: NOTIFY_EMAIL });
+  } catch (err) {
+    console.error('Test email failed:', err.message);
+    res.status(500).json({ sent: false, error: err.message });
+  }
 }));
 
 // Teacher: list threads, reply, hide/unhide, delete message/thread
