@@ -89,9 +89,13 @@ const getComponent20 = (g, key, index) => {
   return 0;
 };
 const deleteUploadedFile = file => {
-  if (!file) return;
-  const filePath = path.join(uploadDir, path.basename(file.filename || ''));
-  if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // Memory storage: nothing on disk to clean. Keep legacy disk cleanup
+  // best-effort for old docs created before DB persistence.
+  if (!file || !file.filename) return;
+  try {
+    const filePath = path.join(uploadDir, path.basename(file.filename || ''));
+    if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch { /* ignore cleanup errors */ }
 };
 const getAttendanceFinal6 = att => (att / 10) * 6;
 // Accepts attendance sent as /10 (stored) or /20 (display) — auto-converts >10
@@ -230,16 +234,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Static HTML pages are served directly from public/
 
-// Multer config
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '').toLowerCase();
-    cb(null, Date.now() + '-' + crypto.randomBytes(8).toString('hex') + ext);
-  }
-});
+// Multer config — memory storage so file bytes go straight to MongoDB
+// (persistent). Disk `uploads/` is ephemeral on Render/Railway and gets
+// wiped on restart, which caused "file not found after many hours".
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
@@ -468,11 +467,23 @@ app.get('/portal/:gradeSlug', (req, res) => {
 app.get('/download/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid exercise id');
   const exercise = await Exercise.findById(req.params.id);
-  if (!exercise || !exercise.fileUrl) return res.status(404).send('File not found');
+  if (!exercise) return res.status(404).send('File not found');
+  // 1) Persistent DB bytes (new uploads) — survives restarts/redeploys
+  if (exercise.fileData && exercise.fileData.length) {
+    const safeName = (exercise.fileName || 'file').replace(/["\r\n]/g, '_');
+    res.set({
+      'Content-Type': exercise.fileType || 'application/octet-stream',
+      'Content-Length': String(exercise.fileData.length),
+      'Content-Disposition': `inline; filename="${safeName}"`
+    });
+    return res.send(exercise.fileData);
+  }
+  // 2) Legacy disk fallback (uploads before DB persistence)
+  if (!exercise.fileUrl) return res.status(404).send('File not found');
   const filename = path.basename(exercise.fileUrl);
   const filePath = path.join(uploadDir, filename);
-  if (!filePath.startsWith(uploadDir) || !fs.existsSync(filePath)) return res.status(404).send('File not found');
-  res.download(filePath, filename);
+  if (!filePath.startsWith(uploadDir) || !fs.existsSync(filePath)) return res.status(404).send('File not found — please ask teacher to re-upload');
+  res.download(filePath, exercise.fileName || filename);
 }));
 
 // ============ TEACHER DASHBOARD API ============
@@ -574,7 +585,7 @@ app.get('/api/content', h(async (req, res) => {
   }
   const [announcements, exercises] = await Promise.all([
     Announcement.find(af).sort({ createdAt: -1 }),
-    Exercise.find(ef).sort({ createdAt: -1 })
+    Exercise.find(ef).select('-fileData').sort({ createdAt: -1 })
   ]);
   res.json({ announcements, exercises, CLASSES });
 }));
@@ -611,34 +622,56 @@ app.post('/api/exercises', uploadExerciseFile, h(async (req, res) => {
   const body = { className, title, description };
   if (semester !== undefined) body.semester = semester;
   if (req.file) {
-    body.fileUrl = '/uploads/' + req.file.filename;
+    // Persistent: store bytes in MongoDB instead of ephemeral disk
+    body.fileData = req.file.buffer;
+    body.fileName = req.file.originalname || 'file';
+    body.fileSize = req.file.size;
     body.fileType = req.file.mimetype;
+    body.fileUrl = 'db:' + Date.now();
   }
   const e = await Exercise.create(body);
-  res.json(e);
+  const out = e.toObject();
+  delete out.fileData;
+  res.json(out);
 }));
 
 app.delete('/api/exercises/:id', h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid exercise id');
   const exercise = await Exercise.findByIdAndDelete(req.params.id);
-  if (exercise?.fileUrl) {
-    const filePath = path.join(uploadDir, path.basename(exercise.fileUrl));
-    if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // DB bytes are deleted with the doc. Best-effort legacy disk cleanup:
+  if (exercise?.fileUrl && !exercise.fileUrl.startsWith('db:')) {
+    try {
+      const filePath = path.join(uploadDir, path.basename(exercise.fileUrl));
+      if (filePath.startsWith(uploadDir) && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch { /* ignore */ }
   }
   res.json({ success: true });
 }));
 
-app.put('/api/exercises/:id', h(async (req, res) => {
+app.put('/api/exercises/:id', uploadExerciseFile, h(async (req, res) => {
   if (!isValidObjectId(req.params.id)) return badRequest(res, 'Invalid exercise id');
   const className = cleanText(req.body.className), title = cleanText(req.body.title), description = cleanRich(req.body.description);
-  const semester = req.body.semester ? parseInt(req.body.semester, 10) : undefined;
+  const semesterRaw = cleanText(req.body.semester);
+  const semester = semesterRaw ? parseInt(semesterRaw, 10) : undefined;
   if (!isValidClassName(className)) return badRequest(res, 'Invalid class');
   if (!title) return badRequest(res, 'Exercise title is required');
   if (semester !== undefined && ![1,2,3,4].includes(semester)) return badRequest(res, 'Invalid semester');
   const update = semester !== undefined
     ? { className, title, description, semester }
     : { $set: { className, title, description }, $unset: { semester: '' } };
-  res.json(await Exercise.findByIdAndUpdate(req.params.id, update, { new: true }));
+  if (req.file) {
+    const fileFields = {
+      fileData: req.file.buffer,
+      fileName: req.file.originalname || 'file',
+      fileSize: req.file.size,
+      fileType: req.file.mimetype,
+      fileUrl: 'db:' + Date.now()
+    };
+    if (update.$set) Object.assign(update.$set, fileFields);
+    else Object.assign(update, fileFields);
+  }
+  const updated = await Exercise.findByIdAndUpdate(req.params.id, update, { new: true }).select('-fileData');
+  res.json(updated);
 }));
 
 // Grades API

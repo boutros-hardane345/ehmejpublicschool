@@ -232,7 +232,7 @@ async function editExercise(id) {
   ensureCancelButton('exerciseForm', cancelExerciseEdit);
   document.getElementById('exerciseForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
   document.getElementById('exDescEditor').focus();
-  showToast('Editing exercise — file stays unchanged unless you pick a new one', 'success');
+  showToast('Editing exercise — attached file stays unless you pick a new one', 'success');
 }
 
 function cancelExerciseEdit() {
@@ -282,15 +282,16 @@ document.getElementById('exerciseForm').addEventListener('submit', async functio
   if (editingExerciseId) {
     btn.textContent = 'Updating...';
     try {
-      await API.put('/api/exercises/' + editingExerciseId, {
-        className: document.getElementById('exClass').value,
-        title: document.getElementById('exTitle').value.trim(),
-        description: descriptionHtml,
-        semester: document.getElementById('exSem').value
-      });
+      const formData = new FormData();
+      formData.append('className', document.getElementById('exClass').value);
+      formData.append('title', document.getElementById('exTitle').value.trim());
+      formData.append('description', descriptionHtml);
+      formData.append('semester', document.getElementById('exSem').value);
       const file = document.getElementById('exFile').files[0];
-      if (file) showToast('Note: file change needs re-upload via new exercise', 'error');
-      showToast('Exercise updated', 'success');
+      if (file) formData.append('file', file);
+      const r = await fetch('/api/exercises/' + editingExerciseId, { method: 'PUT', body: formData });
+      if (!r.ok) throw new Error('Update failed');
+      showToast(file ? 'Exercise + file updated (persistent)' : 'Exercise updated', 'success');
       cancelExerciseEdit();
       loadContent();
     } catch (e) {

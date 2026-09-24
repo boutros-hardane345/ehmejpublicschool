@@ -6,5 +6,10 @@ module.exports = mongoose.model('Exercise', new mongoose.Schema({
   semester: {type:Number,enum:[1,2,3,4]},
   fileUrl: String,
   fileType: String,
+  // Persistent storage: file bytes live in MongoDB so they survive
+  // restarts/redeploys on hosts with ephemeral filesystems (Render/Railway).
+  fileData: Buffer,
+  fileName: String,
+  fileSize: Number,
   createdAt: {type:Date,default:Date.now}
 }));
